@@ -1108,6 +1108,8 @@ uint64_t crypt_get_active_integrity_failures(struct crypt_device *cd,
  */
 /** Unfinished offline reencryption */
 #define CRYPT_REQUIREMENT_OFFLINE_REENCRYPT	(1 << 0)
+/** Online reencryption in-progress */
+#define CRYPT_REQUIREMENT_ONLINE_REENCRYPT	(1 << 1)
 /** unknown requirement in header (output only) */
 #define CRYPT_REQUIREMENT_UNKNOWN		(1 << 31)
 
@@ -2102,6 +2104,42 @@ int crypt_activate_by_token(struct crypt_device *cd,
 	void *usrptr,
 	uint32_t flags);
 /** @} */
+
+struct crypt_params_reencrypt {
+	const char *mode; /* "encrypt", "reencrypt" or "decrypt" */
+	const char *resilience; /* resilience mode. One of "noop", "checksum", "journal" or "shift" */
+	const char *hash; /* "checksum" resilience type only, otherwise ignored */
+	int64_t data_shift; /* must not be zero with "shift" resilience */
+	uint64_t max_hotzone_size; /* "noop" resilience type hotzone size, max hotzine size otherwise */
+	const struct crypt_params_luks2 *luks2;
+};
+
+#define CRYPT_REENCRYPT_INITIALIZE_ONLY	   (1 << 0)
+#define CRYPT_REENCRYPT_MOVE_FIRST_SEGMENT (1 << 1)
+
+int crypt_reencrypt_init_by_passphrase(struct crypt_device *cd,
+	const char *name,
+	const char *passphrase,
+	size_t passphrase_size,
+	int keyslot_old,
+	int keyslot_new,
+	const char *cipher,
+	const char *cipher_mode,
+	const struct crypt_params_reencrypt *params,
+	uint32_t flags);
+
+int crypt_reencrypt_init_by_keyring(struct crypt_device *cd,
+	const char *name,
+	const char *passphrase_description,
+	int keyslot_old,
+	int keyslot_new,
+	const char *cipher,
+	const char *cipher_mode,
+	const struct crypt_params_reencrypt *params,
+	uint32_t flags);
+
+int crypt_reencrypt(struct crypt_device *cd,
+		    int (*progress)(uint64_t size, uint64_t offset, void *usrptr));
 
 #ifdef __cplusplus
 }
