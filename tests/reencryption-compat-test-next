@@ -7,7 +7,7 @@ FAST_PBKDF_PBKDF2="--pbkdf-force-iterations 1000 --pbkdf pbkdf2"
 DEFAULT_ARGON="argon2i"
 
 DEV=""
-DEV_SHRINK="dm-reenc-shrink"
+DEVBIG="reenc2134"
 DEV_NAME=reenc9768
 IMG=reenc-data
 IMG_HDR=/tmp/$IMG.hdr
@@ -56,18 +56,19 @@ scsi_debug_teardown() {
 
 function remove_mapping()
 {
-	[ -b /dev/mapper/$DEV_SHRINK ] && dmsetup remove $DEV_SHRINK
 	[ -b /dev/mapper/$DEV_NAME2 ] && dmsetup remove $DEV_NAME2
 	[ -b /dev/mapper/$DEV_NAME ] && dmsetup remove $DEV_NAME
-	rm -f $IMG $IMG_HDR $KEY1 >/dev/null 2>&1
+	rm -f $IMG $IMG_HDR $KEY1 $DEVBIG >/dev/null 2>&1
 	rmmod scsi_debug 2> /dev/null
 	scsi_debug_teardown $DEV
 }
 
 function fail()
 {
+	local frame=0
 	[ -n "$1" ] && echo "$1"
-	echo "FAILED at line $(caller)"
+	echo "FAILED backtrace:"
+	while caller $frame; do	((frame++)); done
 	remove_mapping
 	exit 2
 }
@@ -104,7 +105,13 @@ function open_crypt() # $1 pwd, $2 hdr
 
 function wipe_dev() # $1 dev
 {
-	blkdiscard --zeroout $1 2>/dev/null || dd if=/dev/zero of=$1 bs=1M conv=notrunc >/dev/null 2>&1
+	if [ -b $1 ] ; then
+		blkdiscard --zeroout $1 2>/dev/null || dd if=/dev/zero of=$1 bs=1M conv=notrunc >/dev/null 2>&1
+	else
+		local size=$(stat --printf="%s" $1)
+		truncate -s 0 $1
+		truncate -s $size $1
+	fi
 }
 
 function wipe() # $1 pass, $2 hdr
@@ -124,6 +131,18 @@ function prepare() # $1 dev1_siz
 	fi
 
 	add_scsi_device $@
+}
+
+function preparebig() # $1 dev1_siz
+{
+	remove_mapping
+
+	if [ ! -e $KEY1 ]; then
+		dd if=/dev/urandom of=$KEY1 count=1 bs=32 >/dev/null 2>&1
+	fi
+
+	DEV=$DEVBIG
+	truncate -s "$1"M $DEV
 }
 
 function check_hash_dev() # $1 dev, $2 hash
@@ -147,23 +166,22 @@ function check_hash_head() # $1 pwd, $2 len, $3 hash, $4 hdr
 	$CRYPTSETUP remove $DEV_NAME || fail
 }
 
-function shrink_dev() # $1 dev, $2 shrink sectors
+function resize_file() # $1 dev, $2 shrink bytes
 {
-	local _bdev_size=$(blockdev --getsz $1)
-	_bdev_size=$((_bdev_size-$2))
-
-	dmsetup create $DEV_SHRINK --table "0 $_bdev_size linear $1 0" || fail
+	local size=$(stat --printf="%s" $1)
+	truncate -s $(($size + $2)) $1
 }
 
 [ $(id -u) != 0 ] && skip "WARNING: You must be root to run this test, test skipped."
 [ ! -x "$CRYPTSETUP" ] && skip "Cannot find $CRYPTSETUP, test skipped."
 modprobe --dry-run scsi_debug || exit 77
+modprobe dm-crypt || fail "dm-crypt failed to load"
 dm_crypt_features
 
 # REENCRYPTION tests
 
-# 252 MiBs of zeros (256MiBs - 4MiB LUKS2 header)
-HASH1=c2726f08d0177d1f658c4481190c914030028d6c9ff73bd6f28297051d60e53c
+# 28 MiBs of zeros (32MiBs - 4MiB LUKS2 header)
+HASH1=f8280c81b347b01405277bf9e8bf0685ae8be863ff104797c65b7169f8203fd2
 # 1 MiB of zeros
 HASH2=30e14955ebf1352266dc2ff8067e68104607e750abb9d3b36582b8af909fcb58
 # 256 MiBs of zeros
@@ -179,7 +197,7 @@ HASH7=18a393d1a505e22ccf3e29effe3005ea8627e4c36b7cca0e53f58121f49b67e1
 
 echo "[1] Reencryption"
 echo -n "[512 sector]"
-prepare dev_size_mb=256
+prepare dev_size_mb=32
 echo $PWD1 | $CRYPTSETUP -q luksFormat --type luks2 -s 128 -c aes-cbc-plain --offset 8192 $FAST_PBKDF_ARGON $DEV || fail
 wipe $PWD1
 check_hash $PWD1 $HASH1
@@ -192,7 +210,7 @@ check_hash $PWD1 $HASH1
 echo $PWD1 | $REENC $DEV -q -s 128 -c aes-cbc-plain --resilience checksum $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH1
 echo -n "[OK][4096 sector]"
-prepare sector_size=4096 dev_size_mb=256
+prepare sector_size=4096 dev_size_mb=32
 echo $PWD1 | $CRYPTSETUP -q luksFormat --type luks2 -s 128 -c aes-cbc-plain --offset 8192 $FAST_PBKDF_ARGON $DEV || fail
 wipe $PWD1
 check_hash $PWD1 $HASH1
@@ -215,7 +233,7 @@ if [ -n "$DM_SECTOR_SIZE" ]; then
 	check_hash $PWD1 $HASH1
 fi
 echo -n "[OK][4096/512 sector]"
-prepare sector_size=512 physblk_exp=3 dev_size_mb=256
+prepare sector_size=512 physblk_exp=3 dev_size_mb=32
 echo $PWD1 | $CRYPTSETUP -q luksFormat --type luks2 -s 128 -c aes-cbc-plain --offset 8192 $FAST_PBKDF_ARGON $DEV || fail
 wipe $PWD1
 check_hash $PWD1 $HASH1
@@ -261,7 +279,7 @@ echo "[OK]"
 
 echo "[2] Encryption with data shift"
 # well, movin' zeroes :-)
-prepare dev_size_mb=64
+preparebig 64
 wipe_dev $DEV
 check_hash_dev $DEV $HASH4
 echo $PWD1 | $REENC $DEV --encrypt -c aes-cbc-essiv:sha256 -s 128 --reduce-device-size 8M -q $FAST_PBKDF_ARGON || fail
@@ -280,9 +298,9 @@ check_hash_head $PWD1 $((31*1024*2)) $HASH7
 wipe_dev $DEV
 echo $PWD1 | $REENC $DEV --encrypt --reduce-device-size 64M -q $FAST_PBKDF_ARGON > /dev/null 2>&1 && fail
 echo $PWD1 | $REENC --encrypt --reduce-device-size 8M --init-only -q $FAST_PBKDF_ARGON $DEV || fail
-shrink_dev $DEV 1
-echo $PWD1 | $REENC /dev/mapper/$DEV_SHRINK 2> /dev/null && fail
-dmsetup remove --retry $DEV_SHRINK 2> /dev/null || fail
+resize_file $DEV -512
+echo $PWD1 | $REENC $DEV 2> /dev/null && fail
+resize_file $DEV 512
 wipe_dev $DEV
 echo $PWD1 | $REENC $DEV --encrypt -c aes-cbc-essiv:sha256 -s 128 --offset 32760 --reduce-device-size 8M -q $FAST_PBKDF_ARGON --init-only >/dev/null 2>&1 && fail
 # data offset at 21MiB
@@ -292,7 +310,7 @@ $CRYPTSETUP luksHeaderRestore --header-backup-file $IMG_HDR $DEV -q || fail
 check_hash $PWD1 $HASH6
 
 echo "[3] Encryption with detached header"
-prepare dev_size_mb=256
+preparebig 256
 wipe_dev $DEV
 echo $PWD1 | $REENC --encrypt -c aes-cbc-essiv:sha256 -s 128 --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 check_hash $PWD1 $HASH3 $IMG_HDR
