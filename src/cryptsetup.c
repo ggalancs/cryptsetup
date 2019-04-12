@@ -2403,7 +2403,12 @@ static int auto_detect_active_name(struct crypt_device *cd, const char *data_dev
 
 static int _get_device_active_name(struct crypt_device *cd, const char *data_device, char *buffer, size_t buffer_size)
 {
+	struct stat st;
 	int r;
+
+	/* FIXME: image can be file! check for loop? */
+	if (stat(data_device, &st) < 0 || !S_ISBLK(st.st_mode))
+		return 0;
 
 	r = auto_detect_active_name(cd, action_argv[0], buffer, buffer_size);
 	if (r > 0) {
