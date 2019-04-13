@@ -318,10 +318,10 @@ wipe_dev $DEV
 echo $PWD1 | $REENC --encrypt --resilience journal --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 check_hash $PWD1 $HASH3 $IMG_HDR
 wipe_dev $DEV
-echo $PWD1 | $REENC --encrypt -c twofish-cbc-plain -s 128 --resilience noop --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
+echo $PWD1 | $REENC --encrypt -c twofish-cbc-essiv:sha256 -s 128 --resilience noop --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 check_hash $PWD1 $HASH3 $IMG_HDR
 wipe_dev $DEV
-echo $PWD1 | $REENC --encrypt -c serpent-xts-plain --resilience checksum --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
+echo $PWD1 | $REENC --encrypt -c aes-xts-plain64 --resilience checksum --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 check_hash $PWD1 $HASH3 $IMG_HDR
 
 echo "[4] Reencryption with detached header"
@@ -330,9 +330,9 @@ echo $PWD1 | $REENC -c aes-cbc-essiv:sha256 -s 128 --header $IMG_HDR -q $FAST_PB
 check_hash $PWD1 $HASH3 $IMG_HDR
 echo $PWD1 | $REENC --resilience journal --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 check_hash $PWD1 $HASH3 $IMG_HDR
-echo $PWD1 | $REENC -c twofish-cbc-plain -s 128 --resilience noop --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
+echo $PWD1 | $REENC -c aes-cbc-essiv:sha256 -s 256 --resilience noop --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 check_hash $PWD1 $HASH3 $IMG_HDR
-echo $PWD1 | $REENC -c serpent-xts-plain --resilience checksum --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
+echo $PWD1 | $REENC -c aes-xts-plain64 --resilience checksum --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 check_hash $PWD1 $HASH3 $IMG_HDR
 
 echo "[5] Decryption with detached header"
@@ -344,11 +344,11 @@ echo $PWD1 | $CRYPTSETUP luksFormat --type luks2 --header $IMG_HDR -q $FAST_PBKD
 wipe $PWD1 $IMG_HDR
 echo $PWD1 | $REENC -q --decrypt --resilience journal --header $IMG_HDR $DEV || fail
 check_hash_dev $DEV $HASH3
-echo $PWD1 | $CRYPTSETUP luksFormat --type luks2 -c twofish-cbc-plain -s 128 --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
+echo $PWD1 | $CRYPTSETUP luksFormat --type luks2 -c twofish-cbc-essiv:sha256 -s 128 --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 wipe $PWD1 $IMG_HDR
 echo $PWD1 | $REENC -q --decrypt --resilience noop --header $IMG_HDR $DEV || fail
 check_hash_dev $DEV $HASH3
-echo $PWD1 | $CRYPTSETUP luksFormat --type luks2 -c serpent-xts-plain --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
+echo $PWD1 | $CRYPTSETUP luksFormat --type luks2 -c aes-xts-plain64 --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 wipe $PWD1 $IMG_HDR
 echo $PWD1 | $REENC -q --decrypt --resilience checksum --header $IMG_HDR $DEV || fail
 check_hash_dev $DEV $HASH3
