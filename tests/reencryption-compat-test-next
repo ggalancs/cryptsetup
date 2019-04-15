@@ -51,13 +51,15 @@ scsi_debug_teardown() {
 		fi
 	done
 
-	test ! -b "$1" || rmmod scsi_debug
+	test ! -b "$1" || rmmod scsi_debug 2> /dev/null
 }
 
 function remove_mapping()
 {
 	[ -b /dev/mapper/$DEV_NAME2 ] && dmsetup remove $DEV_NAME2
 	[ -b /dev/mapper/$DEV_NAME ] && dmsetup remove $DEV_NAME
+	[ -n "$LOOPDEV" ] && losetup -d $LOOPDEV
+	unset LOOPDEV
 	rm -f $IMG $IMG_HDR $KEY1 $DEVBIG >/dev/null 2>&1
 	rmmod scsi_debug 2> /dev/null
 	scsi_debug_teardown $DEV
@@ -141,8 +143,10 @@ function preparebig() # $1 dev1_siz
 		dd if=/dev/urandom of=$KEY1 count=1 bs=32 >/dev/null 2>&1
 	fi
 
-	DEV=$DEVBIG
-	truncate -s "$1"M $DEV
+	truncate -s "$1"M $DEVBIG
+	LOOPDEV=$(losetup -f)
+	losetup -f $DEVBIG || fail
+	DEV=$LOOPDEV
 }
 
 function check_hash_dev() # $1 dev, $2 hash
@@ -170,6 +174,7 @@ function resize_file() # $1 dev, $2 shrink bytes
 {
 	local size=$(stat --printf="%s" $1)
 	truncate -s $(($size + $2)) $1
+	losetup -c $LOOPDEV
 }
 
 [ $(id -u) != 0 ] && skip "WARNING: You must be root to run this test, test skipped."
@@ -298,9 +303,9 @@ check_hash_head $PWD1 $((31*1024*2)) $HASH7
 wipe_dev $DEV
 echo $PWD1 | $REENC $DEV --encrypt --reduce-device-size 64M -q $FAST_PBKDF_ARGON > /dev/null 2>&1 && fail
 echo $PWD1 | $REENC --encrypt --reduce-device-size 8M --init-only -q $FAST_PBKDF_ARGON $DEV || fail
-resize_file $DEV -512
+resize_file $DEVBIG -512
 echo $PWD1 | $REENC $DEV 2> /dev/null && fail
-resize_file $DEV 512
+resize_file $DEVBIG 512
 wipe_dev $DEV
 echo $PWD1 | $REENC $DEV --encrypt -c aes-cbc-essiv:sha256 -s 128 --offset 32760 --reduce-device-size 8M -q $FAST_PBKDF_ARGON --init-only >/dev/null 2>&1 && fail
 # data offset at 21MiB
