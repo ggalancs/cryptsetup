@@ -2712,7 +2712,8 @@ static int action_reencrypt_luks2(struct crypt_device *cd)
 		if (r < 0)
 			goto err;
 		keyslot_new = r;
-	}
+	} else
+		keyslot_new = keyslot_old;
 
 	if (!opt_active_name) {
 		r = _get_device_active_name(cd, action_argv[0], dm_name, sizeof(dm_name));
@@ -2729,6 +2730,8 @@ static int action_reencrypt_luks2(struct crypt_device *cd)
 	r = crypt_reencrypt_init_by_passphrase(cd, active_name, password, passwordLen, keyslot_old, keyslot_new, cipher, mode, &params, reencryption_flags);
 err:
 	crypt_safe_free(password);
+	if (r < 0 && keyslot_new >= 0 && !opt_keep_key && crypt_keyslot_destroy(cd, keyslot_new))
+		log_dbg("Failed to remove keyslot with unbound key.");
 	return r;
 }
 
