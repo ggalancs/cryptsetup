@@ -1510,10 +1510,15 @@ static int _reencrypt_init(struct crypt_device *cd,
 	if (strcmp(params->mode, "decrypt") && (!params->luks2 || !(cipher && cipher_mode) || keyslot_new < 0))
 		return -EINVAL;
 
+	log_dbg(cd, "Initializing reencryption (mode: %s) in LUKS2 metadata.", params->mode);
+
 	/* implicit sector size 512 for decryption */
 	sector_size = params->luks2 ? params->luks2->sector_size : SECTOR_SIZE;
-
-	log_dbg(cd, "Initializing reencryption (mode: %s) in LUKS2 metadata.", params->mode);
+	if (sector_size < SECTOR_SIZE || sector_size > MAX_SECTOR_SIZE ||
+	    NOTPOW2(sector_size)) {
+		log_err(cd, _("Unsupported encryption sector size."));
+		return -EINVAL;
+	}
 
 	if (!cipher_mode || *cipher_mode == '\0')
 		snprintf(_cipher, sizeof(_cipher), "%s", cipher);
