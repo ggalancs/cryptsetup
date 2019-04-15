@@ -587,8 +587,7 @@ int LUKS2_keyslot_open(struct crypt_device *cd,
 int LUKS2_keyslot_reencrypt_create(struct crypt_device *cd,
 	struct luks2_hdr *hdr,
 	int keyslot,
-	const char *reencrypt_mode,
-	int64_t data_shift)
+	const struct crypt_params_reencrypt *params)
 {
 	const keyslot_handler *h;
 	int r;
@@ -601,8 +600,7 @@ int LUKS2_keyslot_reencrypt_create(struct crypt_device *cd,
 	if (!h)
 		return -EINVAL;
 
-	/* doesn't fit alloc prototype (TODO: different keyslot for encryption and reencryption?) */
-	r = reenc_keyslot_alloc(cd, hdr, keyslot, reencrypt_mode, data_shift);
+	r = reenc_keyslot_alloc(cd, hdr, keyslot, params);
 	if (r < 0)
 		return r;
 

@@ -34,8 +34,7 @@ static int reenc_keyslot_open(struct crypt_device *cd,
 int reenc_keyslot_alloc(struct crypt_device *cd,
 	struct luks2_hdr *hdr,
 	int keyslot,
-	const char *reenc_mode, /* reencrypt or encrypt */
-	int64_t data_shift)
+	const struct crypt_params_reencrypt *params)
 {
 	int r;
 	json_object *jobj_keyslots, *jobj_keyslot, *jobj_area;
@@ -50,7 +49,7 @@ int reenc_keyslot_alloc(struct crypt_device *cd,
 		return -EINVAL;
 
 	/* encryption doesn't require area (we shift data and backup will be available) */
-	if (!data_shift) {
+	if (!params->data_shift) {
 		r = LUKS2_find_area_max_gap(cd, hdr, &area_offset, &area_length);
 		if (r < 0)
 			return r;
@@ -66,20 +65,20 @@ int reenc_keyslot_alloc(struct crypt_device *cd,
 
 	jobj_area = json_object_new_object();
 
-	if (data_shift) {
-		log_dbg(cd, "This will be data shift: %" PRIi64, data_shift);
+	if (params->data_shift) {
 		json_object_object_add(jobj_area, "type", json_object_new_string("shift"));
-		json_object_object_add(jobj_area, "data_shift", json_object_new_int64_ex(data_shift));
+		json_object_object_add(jobj_area, "data_shift", json_object_new_int64_ex(params->data_shift << SECTOR_SHIFT));
 	} else
 		/* except data shift protection, initial setting is irrelevant. Type can be changed during reencryption */
-		json_object_object_add(jobj_area, "type", json_object_new_string("noop"));
+		json_object_object_add(jobj_area, "type", json_object_new_string(params->resilience));
 
 	json_object_object_add(jobj_area, "offset", json_object_new_uint64(area_offset));
 	json_object_object_add(jobj_area, "size", json_object_new_uint64(area_length));
 
 	json_object_object_add(jobj_keyslot, "type", json_object_new_string("reencrypt"));
 	json_object_object_add(jobj_keyslot, "key_size", json_object_new_int(1)); /* useless but mandatory */
-	json_object_object_add(jobj_keyslot, "mode", json_object_new_string(reenc_mode));
+	json_object_object_add(jobj_keyslot, "mode", json_object_new_string(params->mode));
+	json_object_object_add(jobj_keyslot, "direction", json_object_new_string(params->direction < 0 ? "backward" : "forward"));
 
 	json_object_object_add(jobj_keyslot, "area", jobj_area);
 
@@ -843,4 +842,25 @@ const char *LUKS2_reencrypt_mode(struct luks2_hdr *hdr)
 	json_object_object_get_ex(jobj_keyslot, "mode", &jobj_mode);
 
 	return json_object_get_string(jobj_mode);
+}
+
+int LUKS2_reencrypt_direction(struct luks2_hdr *hdr)
+{
+	const char *value;
+	json_object *jobj_keyslot, *jobj_mode;
+	int ks = LUKS2_find_keyslot(hdr, "reencrypt");
+
+	if (ks < 0)
+		return 0;
+
+	jobj_keyslot = LUKS2_get_keyslot_jobj(hdr, ks);
+	json_object_object_get_ex(jobj_keyslot, "direction", &jobj_mode);
+
+	value = json_object_get_string(jobj_mode);
+
+	if (!strcmp(value, "forward"))
+		return 1;
+	if (!strcmp(value, "backward"))
+		return -1;
+	return 0;
 }

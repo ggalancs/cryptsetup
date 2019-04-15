@@ -24,7 +24,6 @@
 #include <unistd.h>
 #include <linux/fs.h>
 #include <sys/ioctl.h>
-#include <assert.h>
 
 #include "luks2_internal.h"
 #include "utils_device_locking.h"
@@ -141,17 +140,21 @@ static int _reenc_load(struct crypt_device *cd, struct luks2_hdr *hdr, struct lu
 		rh->type = ENCRYPT;
 	else if (!strcmp(LUKS2_reencrypt_mode(hdr), "decrypt")) {
 		rh->type = DECRYPT;
-		rh->direction = BACKWARD;
 	} else
 		return -ENOTSUP;
 
 	rh->alignment = _reenc_alignment(cd, hdr);
 
+	r = LUKS2_reencrypt_direction(hdr);
+	if (!r)
+		return -EINVAL;
+
+	rh->direction = r < 0 ? BACKWARD : FORWARD;
+
 	if (!strcmp(params->resilience, "shift")) {
 		log_dbg(cd, "Initializaing reencryption context with data_shift resilience.");
 		rh->rp.type = REENC_PROTECTION_DATASHIFT;
 		rh->data_shift = LUKS2_reencrypt_data_shift(hdr);
-		rh->direction = rh->data_shift < 0 ? BACKWARD : FORWARD;
 	} else if (!strcmp(params->resilience, "journal")) {
 		log_dbg(cd, "Initializaing reencryption context with journal resilience.");
 		rh->rp.type = REENC_PROTECTION_JOURNAL;
@@ -1530,6 +1533,10 @@ static int _reencrypt_init(struct crypt_device *cd,
 		return -EINVAL;
 	}
 
+	if ((params->data_shift > 0 && params->direction < 0) ||
+	    (params->data_shift < 0 && params->direction >= 0))
+		return -EINVAL;
+
 	data_offset = LUKS2_get_data_offset(hdr);
 
 	r = device_block_adjust(cd, crypt_data_device(cd), DEV_OK,
@@ -1577,7 +1584,7 @@ static int _reencrypt_init(struct crypt_device *cd,
 	}
 
 	r = LUKS2_keyslot_reencrypt_create(cd, hdr, reencrypt_keyslot,
-					   params->mode, data_shift);
+					   params);
 	if (r < 0)
 		goto err;
 
@@ -1959,7 +1966,7 @@ static int _reencrypt_init_by_passphrase(struct crypt_device *cd,
 	uint32_t flags)
 {
 	struct luks2_hdr *hdr;
-	int r, reencrypt_keyslot = -1;
+	int r, reencrypt_keyslot;
 	struct volume_key *vks = NULL;
 
 	hdr = crypt_get_hdr(cd, CRYPT_LUKS2);
@@ -1987,6 +1994,7 @@ static int _reencrypt_init_by_passphrase(struct crypt_device *cd,
 		reencrypt_keyslot = r;
 	} else if (r == -EBUSY) {
 		log_dbg(cd, "LUKS2 reencryption already initialized.");
+		reencrypt_keyslot = LUKS2_find_keyslot(hdr, "reencrypt");
 		r = 0;
 	}
 
@@ -1994,11 +2002,6 @@ static int _reencrypt_init_by_passphrase(struct crypt_device *cd,
 
 	if (r < 0 || (flags & CRYPT_REENCRYPT_INITIALIZE_ONLY))
 		goto out;
-
-	if (reencrypt_keyslot < 0)
-		reencrypt_keyslot = LUKS2_find_keyslot(hdr, "reencrypt");
-
-	assert(reencrypt_keyslot >= 0);
 
 	r = _reencrypt_load(cd, name, passphrase, passphrase_size, keyslot_old, keyslot_new, &vks, params);
 out:

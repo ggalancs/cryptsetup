@@ -150,8 +150,7 @@ typedef struct  {
 int reenc_keyslot_alloc(struct crypt_device *cd,
 	struct luks2_hdr *hdr,
 	int keyslot,
-	const char *reenc_mode,
-	int64_t data_shift);
+	const struct crypt_params_reencrypt *params);
 
 /**
  * LUKS2 digest handlers (EXPERIMENTAL)

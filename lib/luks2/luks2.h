@@ -295,8 +295,7 @@ int LUKS2_keyslot_reencrypt_store(struct crypt_device *cd,
 int LUKS2_keyslot_reencrypt_create(struct crypt_device *cd,
 	struct luks2_hdr *hdr,
 	int keyslot,
-	const char *reencrypt_mode,
-	int64_t data_shift);
+	const struct crypt_params_reencrypt *params);
 
 int reenc_keyslot_update(struct crypt_device *cd,
 	const struct luks2_reenc_context *rh);
@@ -457,6 +456,7 @@ uint32_t LUKS2_reencrypt_protection_sector_size(struct luks2_hdr *hdr);
 int64_t LUKS2_reencrypt_data_dev_diff(struct luks2_hdr *hdr);
 int64_t LUKS2_reencrypt_data_shift(struct luks2_hdr *hdr);
 const char *LUKS2_reencrypt_mode(struct luks2_hdr *hdr);
+int LUKS2_reencrypt_direction(struct luks2_hdr *hdr);
 
 /*
  * Generic LUKS2 digest

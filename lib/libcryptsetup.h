@@ -2106,10 +2106,11 @@ int crypt_activate_by_token(struct crypt_device *cd,
 /** @} */
 
 struct crypt_params_reencrypt {
-	const char *mode; /* "encrypt", "reencrypt" or "decrypt" */
-	const char *resilience; /* resilience mode. One of "noop", "checksum", "journal" or "shift" */
+	const char *mode; /* "encrypt", "reencrypt" or "decrypt" (immutable after first init)*/
+	int direction; /* negative number is backwards, otherwise forward. (immutable after first init) */
+	const char *resilience; /* resilience mode. One of "noop", "checksum", "journal" or "shift" (only 'shift' is immutable after init) */
 	const char *hash; /* "checksum" resilience type only, otherwise ignored */
-	int64_t data_shift; /* must not be zero with "shift" resilience */
+	int64_t data_shift; /* must not be zero with "shift" resilience (immutable after first init) */
 	uint64_t max_hotzone_size; /* "noop" resilience type hotzone size, max hotzine size otherwise */
 	const struct crypt_params_luks2 *luks2;
 };
