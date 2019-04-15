@@ -16,6 +16,10 @@ PWD1="93R4P4pIqAH8"
 PWD2="1cND4319812f"
 PWD3="1-9Qu5Ejfnqv"
 
+HAVE_KEYRING=$(grep -e "#define KERNEL_KEYRING" ../config.h)
+test -n "$HAVE_KEYRING" || HAVE_KEYRING=0
+HAVE_KEYRING=${HAVE_KEYRING: -1}
+
 function dm_crypt_features()
 {
 	VER_STR=$(dmsetup targets | grep crypt | cut -f2 -dv)
@@ -177,6 +181,7 @@ function resize_file() # $1 dev, $2 shrink bytes
 	losetup -c $LOOPDEV
 }
 
+[ "$HAVE_KEYRING" -eq 1 ] || skip "cryptsetup compiled without kernel keyring support."
 [ $(id -u) != 0 ] && skip "WARNING: You must be root to run this test, test skipped."
 [ ! -x "$CRYPTSETUP" ] && skip "Cannot find $CRYPTSETUP, test skipped."
 modprobe --dry-run scsi_debug || exit 77
