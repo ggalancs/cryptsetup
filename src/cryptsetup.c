@@ -2464,7 +2464,7 @@ static int action_reencrypt_load(struct crypt_device *cd)
 static int action_encrypt_luks2(struct crypt_device **cd)
 {
 	const char *type;
-	int keyslot, r;
+	int keyslot, r, fd;
 	uuid_t uuid;
 	size_t passwordLen;
 	char *msg, uuid_str[37], header_file[PATH_MAX] = { 0 }, *password = NULL;
@@ -2542,6 +2542,23 @@ static int action_encrypt_luks2(struct crypt_device **cd)
 
 	if (!opt_header_device) {
 		snprintf(header_file, sizeof(header_file), "LUKS2-temp-%s.new", opt_uuid);
+		fd = open(header_file, O_CREAT|O_EXCL|O_WRONLY, S_IRUSR|S_IWUSR);
+		if (fd == -1) {
+			if (errno == EEXIST)
+				log_err(_("Temporary header file %s already exists. Aborting."), header_file);
+			else
+				log_err(_("Cannot create temporary header file %s."), header_file);
+			return -EINVAL;
+		}
+
+		r = posix_fallocate(fd, 0, 4096);
+		close(fd);
+		if (r) {
+			log_err(_("Cannot create temporary header file %s."), header_file);
+			r = -EINVAL;
+			goto err;
+		}
+
 		opt_header_device = header_file;
 		/*
 		 * FIXME: just override offset here, but we should support both.
