@@ -2141,6 +2141,16 @@ int crypt_reencrypt_init_by_keyring(struct crypt_device *cd,
 int crypt_reencrypt(struct crypt_device *cd,
 		    int (*progress)(uint64_t size, uint64_t offset, void *usrptr));
 
+typedef enum {
+	REENCRYPT_NONE = 0,
+	REENCRYPT_CLEAN,
+	REENCRYPT_CRASH,
+	REENCRYPT_INVALID
+} luks2_reencrypt_info; /* <--- rename to crypt_reencrypt_info */
+
+luks2_reencrypt_info crypt_reencrypt_status(struct crypt_device *cd,
+		struct crypt_params_reencrypt *params);
+
 #ifdef __cplusplus
 }
 #endif

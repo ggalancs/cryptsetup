@@ -5784,6 +5784,30 @@ void crypt_serialize_unlock(struct crypt_device *cd)
 	cd->pbkdf_memory_hard_lock = NULL;
 }
 
+luks2_reencrypt_info crypt_reencrypt_status(struct crypt_device *cd,
+		struct crypt_params_reencrypt *params)
+{
+	luks2_reencrypt_info ri;
+	struct luks2_hdr *hdr;
+
+	if (_onlyLUKS2(cd, CRYPT_CD_QUIET, CRYPT_REQUIREMENT_ONLINE_REENCRYPT))
+		return REENCRYPT_INVALID;
+
+	hdr = crypt_get_hdr(cd, CRYPT_LUKS2);
+
+	ri = LUKS2_reenc_status(hdr);
+	if (ri == REENCRYPT_NONE || ri == REENCRYPT_INVALID || !params)
+		return ri;
+
+	params->mode = LUKS2_reencrypt_mode(hdr);
+	params->resilience = LUKS2_reencrypt_protection_type(hdr);
+	params->hash = LUKS2_reencrypt_protection_hash(hdr);
+	params->data_shift = LUKS2_reencrypt_data_shift(hdr);
+	params->max_hotzone_size = 0;
+
+	return ri;
+}
+
 static void __attribute__((destructor)) libcryptsetup_exit(void)
 {
 	crypt_backend_destroy();
