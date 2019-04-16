@@ -2723,12 +2723,12 @@ static int action_reencrypt_luks2(struct crypt_device *cd)
 
 	if (!opt_keep_key) {
 		if (opt_key_size)
-			key_size = opt_key_size;
+			key_size = opt_key_size / 8;
 		else if (opt_cipher)
-			key_size = DEFAULT_LUKS1_KEYBITS;
+			key_size = DEFAULT_LUKS1_KEYBITS / 8;
 		else
 			key_size = crypt_get_volume_key_size(cd);
-		r = crypt_keyslot_add_by_key(cd, CRYPT_ANY_SLOT, NULL, key_size / 8,
+		r = crypt_keyslot_add_by_key(cd, CRYPT_ANY_SLOT, NULL, key_size,
 				password, passwordLen, CRYPT_VOLUME_KEY_NO_SEGMENT);
 		tools_keyslot_msg(r, CREATED);
 		if (r < 0)
