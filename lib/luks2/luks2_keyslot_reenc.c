@@ -807,17 +807,6 @@ int LUKS2_reenc_create_segments(struct crypt_device *cd,
 	return r;
 }
 
-int64_t LUKS2_reencrypt_data_dev_diff(struct luks2_hdr *hdr)
-{
-	json_object *jobj_seg_old = LUKS2_get_segment_by_flag(hdr, "reencrypt-previous"),
-		    *jobj_seg_new = LUKS2_get_segment_by_flag(hdr, "reencrypt-final");
-
-	if (jobj_seg_old && jobj_seg_new)
-		return (int64_t)json_segment_get_offset(jobj_seg_old, 0) - (int64_t)json_segment_get_offset(jobj_seg_new, 0);
-
-	return 0;
-}
-
 uint64_t LUKS2_reencrypt_data_shift(struct luks2_hdr *hdr)
 {
 	json_object *jobj_keyslot, *jobj_area, *jobj_data_shift;
