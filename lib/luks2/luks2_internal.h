@@ -192,4 +192,8 @@ int LUKS2_find_area_gap(struct crypt_device *cd, struct luks2_hdr *hdr,
 int LUKS2_find_area_max_gap(struct crypt_device *cd, struct luks2_hdr *hdr,
 			    uint64_t *area_offset, uint64_t *area_length);
 
+int LUKS2_check_cipher(struct crypt_device *cd,
+		      size_t keylength,
+		      const char *cipher,
+		      const char *cipher_mode);
 #endif

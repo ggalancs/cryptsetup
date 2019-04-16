@@ -2678,7 +2678,7 @@ err:
 static int action_reencrypt_luks2(struct crypt_device *cd)
 {
 	size_t passwordLen;
-	int r, keyslot_old, keyslot_new = CRYPT_ANY_SLOT;
+	int r, keyslot_old, keyslot_new = CRYPT_ANY_SLOT, key_size;
 	char dm_name[PATH_MAX], cipher [MAX_CIPHER_LEN], mode[MAX_CIPHER_LEN], *password = NULL;
 	const char *active_name = NULL;
 	struct crypt_params_luks2 luks2_params = {};
@@ -2709,9 +2709,6 @@ static int action_reencrypt_luks2(struct crypt_device *cd)
 	if (r)
 		return r;
 
-	if (!active_name)
-		log_dbg("Device %s seems unused. Proceeding with offline operation.", action_argv[0]);
-
 	r = tools_get_key(NULL, &password, &passwordLen,
 			opt_keyfile_offset, opt_keyfile_size, opt_key_file,
 			opt_timeout, _verify_passphrase(0), 0, cd);
@@ -2725,8 +2722,13 @@ static int action_reencrypt_luks2(struct crypt_device *cd)
 	keyslot_old = r;
 
 	if (!opt_keep_key) {
-		r = crypt_keyslot_add_by_key(cd, CRYPT_ANY_SLOT, NULL,
-				(opt_key_size ? (opt_key_size / 8) : crypt_get_volume_key_size(cd)),
+		if (opt_key_size)
+			key_size = opt_key_size;
+		else if (opt_cipher)
+			key_size = DEFAULT_LUKS1_KEYBITS;
+		else
+			key_size = crypt_get_volume_key_size(cd);
+		r = crypt_keyslot_add_by_key(cd, CRYPT_ANY_SLOT, NULL, key_size / 8,
 				password, passwordLen, CRYPT_VOLUME_KEY_NO_SEGMENT);
 		tools_keyslot_msg(r, CREATED);
 		if (r < 0)

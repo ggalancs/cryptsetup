@@ -1969,6 +1969,11 @@ static int _reencrypt_init_by_passphrase(struct crypt_device *cd,
 	int r, reencrypt_keyslot;
 	struct volume_key *vks = NULL;
 
+	r = LUKS2_check_cipher(cd, crypt_keyslot_get_key_size(cd, keyslot_new),
+			       cipher, cipher_mode);
+	if (r < 0)
+		return r;
+
 	hdr = crypt_get_hdr(cd, CRYPT_LUKS2);
 
 	r = device_write_lock(cd, crypt_metadata_device(cd));
