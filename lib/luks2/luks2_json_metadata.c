@@ -217,25 +217,6 @@ uint32_t json_object_get_uint32(json_object *jobj)
 }
 
 /* jobj has to be json_type_string and numbered */
-static json_bool json_str_to_int64(json_object *jobj, int64_t *value)
-{
-	char *endptr;
-	long long int tmp;
-
-	errno = 0;
-	tmp = strtoll(json_object_get_string(jobj), &endptr, 10);
-	if (*endptr || errno) {
-		log_dbg(NULL, "Failed to parse int64_t type from string %s.",
-			json_object_get_string(jobj));
-		*value = 0;
-		return FALSE;
-	}
-
-	*value = tmp;
-	return TRUE;
-}
-
-/* jobj has to be json_type_string and numbered */
 static json_bool json_str_to_uint64(json_object *jobj, uint64_t *value)
 {
 	char *endptr;
@@ -250,13 +231,6 @@ static json_bool json_str_to_uint64(json_object *jobj, uint64_t *value)
 
 	*value = tmp;
 	return TRUE;
-}
-
-int64_t json_object_get_int64_ex(json_object *jobj)
-{
-	int64_t r;
-	json_str_to_int64(jobj, &r);
-	return r;
 }
 
 uint64_t json_object_get_uint64(json_object *jobj)
@@ -274,21 +248,6 @@ json_object *json_object_new_uint64(uint64_t value)
 	json_object *jobj;
 
 	r = snprintf(num, sizeof(num), "%" PRIu64, value);
-	if (r < 0 || (size_t)r >= sizeof(num))
-		return NULL;
-
-	jobj = json_object_new_string(num);
-	return jobj;
-}
-
-json_object *json_object_new_int64_ex(int64_t value)
-{
-	/* 18446744073709551615 */
-	char num[21];
-	int r;
-	json_object *jobj;
-
-	r = snprintf(num, sizeof(num), "%" PRIi64, value);
 	if (r < 0 || (size_t)r >= sizeof(num))
 		return NULL;
 
@@ -1759,7 +1718,7 @@ luks2_reencrypt_info LUKS2_reenc_status(struct luks2_hdr *hdr)
 	return REENCRYPT_CRASH;
 }
 
-static int _offset_backward_moved(struct luks2_hdr *hdr, json_object *jobj_segments, uint64_t *reencrypt_length, int64_t data_shift, uint64_t *offset)
+static int _offset_backward_moved(struct luks2_hdr *hdr, json_object *jobj_segments, uint64_t *reencrypt_length, uint64_t data_shift, uint64_t *offset)
 {
 	uint64_t tmp, linear_length = 0;
 	int sg, segs = json_segments_count(jobj_segments);
@@ -1773,11 +1732,11 @@ static int _offset_backward_moved(struct luks2_hdr *hdr, json_object *jobj_segme
 	if (linear_length) {
 		log_dbg(NULL, "linear length: %" PRIu64, linear_length);
 		/* this must not happer. first linear segment is exaclty data offset long */
-		if (linear_length < imaxabs(data_shift))
+		if (linear_length < data_shift)
 			return -EINVAL;
-		tmp = linear_length + data_shift;
-		if (tmp < imaxabs(data_shift)) {
-			*offset = imaxabs(data_shift);
+		tmp = linear_length - data_shift;
+		if (tmp < data_shift) {
+			*offset = data_shift;
 			*reencrypt_length = tmp;
 		} else
 			*offset = tmp;
@@ -1828,11 +1787,11 @@ static int _offset_backward(struct luks2_hdr *hdr, json_object *jobj_segments, u
 
 /* must be always relative to data offset */
 /* the LUKS2 header MUST be valid */
-int LUKS2_get_reencrypt_offset(struct luks2_hdr *hdr, int direction, uint64_t device_size, uint64_t *reencrypt_length, uint64_t *offset)
+int LUKS2_get_reencrypt_offset(struct luks2_hdr *hdr, crypt_reencrypt_direction_info di, uint64_t device_size, uint64_t *reencrypt_length, uint64_t *offset)
 {
 	int sg;
 	json_object *jobj_segments;
-	int64_t data_shift = LUKS2_reencrypt_data_shift(hdr);
+	uint64_t data_shift = LUKS2_reencrypt_data_shift(hdr);
 
 	if (!offset)
 		return -EINVAL;
@@ -1845,9 +1804,9 @@ int LUKS2_get_reencrypt_offset(struct luks2_hdr *hdr, int direction, uint64_t de
 		return 0;
 	}
 
-	if (direction == FORWARD)
+	if (di == REENCRYPT_FORWARD)
 		return _offset_forward(hdr, jobj_segments, offset);
-	else if (direction == BACKWARD) {
+	else if (di == REENCRYPT_BACKWARD) {
 		if (!strcmp(LUKS2_reencrypt_mode(hdr), "encrypt") && LUKS2_get_segment_id_by_flag(hdr, "reencrypt-moved-segment") >= 0)
 			return _offset_backward_moved(hdr, jobj_segments, reencrypt_length, data_shift, offset);
 		return _offset_backward(hdr, jobj_segments, device_size, reencrypt_length, offset);
@@ -1865,7 +1824,7 @@ uint64_t LUKS2_get_reencrypt_length(struct luks2_hdr *hdr, struct luks2_reenc_co
 	else if (rh->rp.type == REENC_PROTECTION_CHECKSUM)
 		length = (keyslot_area_length / rh->rp.p.csum.hash_size - 1) * rh->alignment;
 	else if (rh->rp.type == REENC_PROTECTION_DATASHIFT)
-		length = imaxabs(LUKS2_reencrypt_data_shift(hdr));
+		length = LUKS2_reencrypt_data_shift(hdr);
 	else
 		length = keyslot_area_length;
 

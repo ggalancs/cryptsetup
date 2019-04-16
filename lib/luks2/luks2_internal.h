@@ -62,10 +62,8 @@ void hexprint_base64(struct crypt_device *cd, json_object *jobj,
 json_object *parse_json_len(struct crypt_device *cd, const char *json_area,
 			    uint64_t max_length, int *json_len);
 uint64_t json_object_get_uint64(json_object *jobj);
-int64_t json_object_get_int64_ex(json_object *jobj);
 uint32_t json_object_get_uint32(json_object *jobj);
 json_object *json_object_new_uint64(uint64_t value);
-json_object *json_object_new_int64_ex(int64_t value);
 
 int json_object_object_add_by_uint(json_object *jobj, unsigned key, json_object *jobj_val);
 void json_object_object_del_by_uint(json_object *jobj, unsigned key);

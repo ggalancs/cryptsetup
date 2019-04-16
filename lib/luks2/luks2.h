@@ -153,11 +153,11 @@ struct luks2_reenc_context {
 	uint64_t offset;
 	uint64_t progress;
 	uint64_t length;
-	int64_t data_shift;
+	uint64_t data_shift;
 	size_t alignment;
 	uint64_t device_size;
 	bool online;
-	enum { FORWARD = 0, BACKWARD } direction;
+	crypt_reencrypt_direction_info direction;
 
 	enum { REENCRYPT = 0, ENCRYPT, DECRYPT } type;
 
@@ -454,9 +454,9 @@ const char *LUKS2_reencrypt_protection_type(struct luks2_hdr *hdr);
 const char *LUKS2_reencrypt_protection_hash(struct luks2_hdr *hdr);
 uint32_t LUKS2_reencrypt_protection_sector_size(struct luks2_hdr *hdr);
 int64_t LUKS2_reencrypt_data_dev_diff(struct luks2_hdr *hdr);
-int64_t LUKS2_reencrypt_data_shift(struct luks2_hdr *hdr);
+uint64_t LUKS2_reencrypt_data_shift(struct luks2_hdr *hdr);
 const char *LUKS2_reencrypt_mode(struct luks2_hdr *hdr);
-int LUKS2_reencrypt_direction(struct luks2_hdr *hdr);
+int LUKS2_reencrypt_direction(struct luks2_hdr *hdr, crypt_reencrypt_direction_info *di);
 
 /*
  * Generic LUKS2 digest
@@ -556,7 +556,7 @@ int LUKS2_wipe_header_areas(struct crypt_device *cd,
 
 uint64_t LUKS2_get_data_offset(struct luks2_hdr *hdr);
 int LUKS2_get_data_size(struct luks2_hdr *hdr, uint64_t *size);
-int LUKS2_get_reencrypt_offset(struct luks2_hdr *hdr, int mode, uint64_t device_size, uint64_t *reencrypt_length, uint64_t *offset);
+int LUKS2_get_reencrypt_offset(struct luks2_hdr *hdr, crypt_reencrypt_direction_info di, uint64_t device_size, uint64_t *reencrypt_length, uint64_t *offset);
 uint64_t LUKS2_get_reencrypt_length(struct luks2_hdr *hdr, struct luks2_reenc_context *rh, uint64_t length);
 int LUKS2_get_sector_size(struct luks2_hdr *hdr);
 const char *LUKS2_get_cipher(struct luks2_hdr *hdr, int segment);
