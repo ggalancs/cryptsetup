@@ -2454,7 +2454,7 @@ static int action_reencrypt_load(struct crypt_device *cd)
 	if (r < 0)
 		return r;
 
-	r = crypt_reencrypt_init_by_passphrase(cd, active_name, password, passwordLen, opt_key_slot, opt_key_slot, NULL, NULL, &params, 0);
+	r = crypt_reencrypt_init_by_passphrase(cd, active_name, password, passwordLen, opt_key_slot, opt_key_slot, NULL, NULL, &params);
 
 	crypt_safe_free(password);
 
@@ -2468,7 +2468,7 @@ static int action_encrypt_luks2(struct crypt_device **cd)
 	uuid_t uuid;
 	size_t passwordLen;
 	char *msg, uuid_str[37], header_file[PATH_MAX] = { 0 }, *password = NULL;
-	uint32_t activate_flags = 0, reencryption_flags = CRYPT_REENCRYPT_INITIALIZE_ONLY;
+	uint32_t activate_flags = 0;
 	const struct crypt_params_luks2 luks2_params = {
 		.sector_size = opt_sector_size ?: SECTOR_SIZE
 	};
@@ -2478,7 +2478,8 @@ static int action_encrypt_luks2(struct crypt_device **cd)
 		.resilience = opt_resilience_mode,
 		.hash = opt_resilience_hash,
 		.max_hotzone_size = strcmp(opt_resilience_mode, "noop") ? 0 : opt_hotzone_size_noop,
-		.luks2 = &luks2_params
+		.luks2 = &luks2_params,
+		.flags = CRYPT_REENCRYPT_INITIALIZE_ONLY
 	};
 
 	type = luksType(opt_type);
@@ -2568,7 +2569,7 @@ static int action_encrypt_luks2(struct crypt_device **cd)
 		if (!opt_offset)
 			opt_offset = imaxabs(opt_data_shift) / (2 * SECTOR_SIZE);
 		opt_data_shift >>= 1;
-		reencryption_flags |= CRYPT_REENCRYPT_MOVE_FIRST_SEGMENT;
+		params.flags |= CRYPT_REENCRYPT_MOVE_FIRST_SEGMENT;
 	} else if (opt_data_shift < 0) {
 		if (!opt_luks2_metadata_size)
 			opt_luks2_metadata_size = 0x4000; /* missing default here */
@@ -2593,8 +2594,7 @@ static int action_encrypt_luks2(struct crypt_device **cd)
 	keyslot = opt_key_slot < 0 ? 0 : opt_key_slot;
 	r = crypt_reencrypt_init_by_passphrase(*cd, NULL, password, passwordLen,
 			CRYPT_ANY_SLOT, keyslot, crypt_get_cipher(*cd),
-			crypt_get_cipher_mode(*cd), &params,
-			reencryption_flags);
+			crypt_get_cipher_mode(*cd), &params);
 	if (r < 0) {
 		crypt_keyslot_destroy(*cd, keyslot);
 		goto err;
@@ -2623,9 +2623,11 @@ static int action_encrypt_luks2(struct crypt_device **cd)
 	}
 
 	/* just load reencryption context to continue reencryption */
-	if (r >= 0 && !opt_reencrypt_init_only && (reencryption_flags & CRYPT_REENCRYPT_INITIALIZE_ONLY))
+	if (r >= 0 && !opt_reencrypt_init_only) {
+		params.flags &= ~CRYPT_REENCRYPT_INITIALIZE_ONLY;
 		r = crypt_reencrypt_init_by_passphrase(*cd, action_argc > 1 ? action_argv[1] : NULL, password, passwordLen,
-				CRYPT_ANY_SLOT, keyslot, NULL, NULL, &params, 0);
+				CRYPT_ANY_SLOT, keyslot, NULL, NULL, &params);
+	}
 err:
 	crypt_safe_free(password);
 	if (*header_file)
@@ -2645,9 +2647,9 @@ static int action_decrypt_luks2(struct crypt_device *cd)
 		.hash = opt_resilience_hash,
 		.data_shift = opt_data_shift / SECTOR_SIZE,
 		.max_hotzone_size = strcmp(opt_resilience_mode, "noop") ? 0 : opt_hotzone_size_noop,
+		.flags = opt_reencrypt_init_only ? CRYPT_REENCRYPT_INITIALIZE_ONLY : 0
 	};
 	size_t passwordLen;
-	uint32_t reencryption_flags = (opt_reencrypt_init_only ? CRYPT_REENCRYPT_INITIALIZE_ONLY : 0);
 
 	r = tools_get_key(NULL, &password, &passwordLen,
 			opt_keyfile_offset, opt_keyfile_size, opt_key_file,
@@ -2668,8 +2670,7 @@ static int action_decrypt_luks2(struct crypt_device *cd)
 		log_dbg("Device %s seems unused. Proceeding with offline operation.", action_argv[0]);
 
 	r = crypt_reencrypt_init_by_passphrase(cd, active_name, password,
-			passwordLen, opt_key_slot, CRYPT_ANY_SLOT, NULL, NULL, &params,
-			reencryption_flags);
+			passwordLen, opt_key_slot, CRYPT_ANY_SLOT, NULL, NULL, &params);
 err:
 	crypt_safe_free(password);
 	return r;
@@ -2689,9 +2690,9 @@ static int action_reencrypt_luks2(struct crypt_device *cd)
 		.hash = opt_resilience_hash,
 		.data_shift = opt_data_shift / SECTOR_SIZE,
 		.max_hotzone_size = strcmp(opt_resilience_mode, "noop") ? 0 : opt_hotzone_size_noop,
-		.luks2 = &luks2_params
+		.luks2 = &luks2_params,
+		.flags = opt_reencrypt_init_only ? CRYPT_REENCRYPT_INITIALIZE_ONLY : 0
 	};
-	uint32_t reencryption_flags = (opt_reencrypt_init_only ? CRYPT_REENCRYPT_INITIALIZE_ONLY : 0);
 
 	if (!opt_cipher) {
 		strncpy(cipher, crypt_get_cipher(cd), MAX_CIPHER_LEN - 1);
@@ -2749,7 +2750,7 @@ static int action_reencrypt_luks2(struct crypt_device *cd)
 	if (!active_name)
 		log_dbg("Device %s seems unused. Proceeding with offline operation.", action_argv[0]);
 
-	r = crypt_reencrypt_init_by_passphrase(cd, active_name, password, passwordLen, keyslot_old, keyslot_new, cipher, mode, &params, reencryption_flags);
+	r = crypt_reencrypt_init_by_passphrase(cd, active_name, password, passwordLen, keyslot_old, keyslot_new, cipher, mode, &params);
 err:
 	crypt_safe_free(password);
 	if (r < 0 && keyslot_new >= 0 && !opt_keep_key && crypt_keyslot_destroy(cd, keyslot_new))

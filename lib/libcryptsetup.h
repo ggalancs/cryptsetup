@@ -2105,6 +2105,9 @@ int crypt_activate_by_token(struct crypt_device *cd,
 	uint32_t flags);
 /** @} */
 
+#define CRYPT_REENCRYPT_INITIALIZE_ONLY    (1 << 0)
+#define CRYPT_REENCRYPT_MOVE_FIRST_SEGMENT (1 << 1)
+
 struct crypt_params_reencrypt {
 	const char *mode; /* "encrypt", "reencrypt" or "decrypt" (immutable after first init)*/
 	int direction; /* negative number is backwards, otherwise forward. (immutable after first init) */
@@ -2113,10 +2116,8 @@ struct crypt_params_reencrypt {
 	int64_t data_shift; /* must not be zero with "shift" resilience (immutable after first init) */
 	uint64_t max_hotzone_size; /* "noop" resilience type hotzone size, max hotzine size otherwise */
 	const struct crypt_params_luks2 *luks2;
+	uint32_t flags;
 };
-
-#define CRYPT_REENCRYPT_INITIALIZE_ONLY	   (1 << 0)
-#define CRYPT_REENCRYPT_MOVE_FIRST_SEGMENT (1 << 1)
 
 int crypt_reencrypt_init_by_passphrase(struct crypt_device *cd,
 	const char *name,
@@ -2126,8 +2127,7 @@ int crypt_reencrypt_init_by_passphrase(struct crypt_device *cd,
 	int keyslot_new,
 	const char *cipher,
 	const char *cipher_mode,
-	const struct crypt_params_reencrypt *params,
-	uint32_t flags);
+	const struct crypt_params_reencrypt *params);
 
 int crypt_reencrypt_init_by_keyring(struct crypt_device *cd,
 	const char *name,
@@ -2136,8 +2136,7 @@ int crypt_reencrypt_init_by_keyring(struct crypt_device *cd,
 	int keyslot_new,
 	const char *cipher,
 	const char *cipher_mode,
-	const struct crypt_params_reencrypt *params,
-	uint32_t flags);
+	const struct crypt_params_reencrypt *params);
 
 int crypt_reencrypt(struct crypt_device *cd,
 		    int (*progress)(uint64_t size, uint64_t offset, void *usrptr));

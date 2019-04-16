@@ -1497,15 +1497,14 @@ static int _reencrypt_init(struct crypt_device *cd,
 		const char *cipher,
 		const char *cipher_mode,
 		const struct crypt_params_reencrypt *params,
-		struct volume_key **vks,
-		uint32_t flags)
+		struct volume_key **vks)
 {
+	bool move_first_segment;
 	char _cipher[128];
 	int64_t data_shift;
 	uint32_t sector_size;
 	int r, reencrypt_keyslot, devfd = -1;
 	uint64_t data_offset, dev_size = 0;
-	bool move_first_segment = (flags & CRYPT_REENCRYPT_MOVE_FIRST_SEGMENT);
 
 	if (!params || parse_reencryption_mode(params->mode))
 		return -EINVAL;
@@ -1514,6 +1513,8 @@ static int _reencrypt_init(struct crypt_device *cd,
 		return -EINVAL;
 
 	log_dbg(cd, "Initializing reencryption (mode: %s) in LUKS2 metadata.", params->mode);
+
+	move_first_segment = (params->flags & CRYPT_REENCRYPT_MOVE_FIRST_SEGMENT);
 
 	/* implicit sector size 512 for decryption */
 	sector_size = params->luks2 ? params->luks2->sector_size : SECTOR_SIZE;
@@ -1962,12 +1963,12 @@ static int _reencrypt_init_by_passphrase(struct crypt_device *cd,
 	int keyslot_new,
 	const char *cipher,
 	const char *cipher_mode,
-	const struct crypt_params_reencrypt *params,
-	uint32_t flags)
+	const struct crypt_params_reencrypt *params)
 {
 	struct luks2_hdr *hdr;
 	int r, reencrypt_keyslot;
 	struct volume_key *vks = NULL;
+	uint32_t flags = params ? params->flags : 0;
 
 	if (cipher) {
 		r = LUKS2_check_cipher(cd, crypt_keyslot_get_key_size(cd, keyslot_new),
@@ -1997,7 +1998,7 @@ static int _reencrypt_init_by_passphrase(struct crypt_device *cd,
 	/* r == -EBUSY, skip initialization and proceed with reencrypt load */
 
 	if (!r) {
-		r = _reencrypt_init(cd, hdr, passphrase, passphrase_size, keyslot_old, keyslot_new, cipher, cipher_mode, params, &vks, flags);
+		r = _reencrypt_init(cd, hdr, passphrase, passphrase_size, keyslot_old, keyslot_new, cipher, cipher_mode, params, &vks);
 		reencrypt_keyslot = r;
 	} else if (r == -EBUSY) {
 		log_dbg(cd, "LUKS2 reencryption already initialized.");
@@ -2025,8 +2026,7 @@ int crypt_reencrypt_init_by_keyring(struct crypt_device *cd,
 	int keyslot_new,
 	const char *cipher,
 	const char *cipher_mode,
-	const struct crypt_params_reencrypt *params,
-	uint32_t flags)
+	const struct crypt_params_reencrypt *params)
 {
 	int r;
 	char *passphrase;
@@ -2041,7 +2041,7 @@ int crypt_reencrypt_init_by_keyring(struct crypt_device *cd,
 		return -EINVAL;
 	}
 
-	r = _reencrypt_init_by_passphrase(cd, name, passphrase, passphrase_size, keyslot_old, keyslot_new, cipher, cipher_mode, params, flags);
+	r = _reencrypt_init_by_passphrase(cd, name, passphrase, passphrase_size, keyslot_old, keyslot_new, cipher, cipher_mode, params);
 
 	crypt_memzero(passphrase, passphrase_size);
 	free(passphrase);
@@ -2057,13 +2057,12 @@ int crypt_reencrypt_init_by_passphrase(struct crypt_device *cd,
 	int keyslot_new,
 	const char *cipher,
 	const char *cipher_mode,
-	const struct crypt_params_reencrypt *params,
-	uint32_t flags)
+	const struct crypt_params_reencrypt *params)
 {
 	if (onlyLUKS2mask(cd, CRYPT_REQUIREMENT_ONLINE_REENCRYPT) || !passphrase)
 		return -EINVAL;
 
-	return _reencrypt_init_by_passphrase(cd, name, passphrase, passphrase_size, keyslot_old, keyslot_new, cipher, cipher_mode, params, flags);
+	return _reencrypt_init_by_passphrase(cd, name, passphrase, passphrase_size, keyslot_old, keyslot_new, cipher, cipher_mode, params);
 }
 
 static reenc_status_t _reencrypt_step(struct crypt_device *cd,
