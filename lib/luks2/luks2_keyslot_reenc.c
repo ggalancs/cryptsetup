@@ -70,7 +70,7 @@ int reenc_keyslot_alloc(struct crypt_device *cd,
 		json_object_object_add(jobj_area, "data_shift", json_object_new_uint64(params->data_shift << SECTOR_SHIFT));
 	} else
 		/* except data shift protection, initial setting is irrelevant. Type can be changed during reencryption */
-		json_object_object_add(jobj_area, "type", json_object_new_string(params->resilience));
+		json_object_object_add(jobj_area, "type", json_object_new_string("noop"));
 
 	json_object_object_add(jobj_area, "offset", json_object_new_uint64(area_offset));
 	json_object_object_add(jobj_area, "size", json_object_new_uint64(area_length));
@@ -201,7 +201,6 @@ int reenc_keyslot_update(struct crypt_device *cd,
 		json_object_object_add(jobj_area, "type", json_object_new_string("checksum"));
 		json_object_object_add(jobj_area, "hash", json_object_new_string(rh->rp.p.csum.hash));
 		json_object_object_add(jobj_area, "sector_size", json_object_new_int64(rh->alignment));
-		//FIXME: add hash size explicitly?
 	} else if (rh->rp.type == REENC_PROTECTION_NOOP) {
 		log_dbg(cd, "Updating reencrypt keyslot for noop protection.");
 		json_object_object_add(jobj_area, "type", json_object_new_string("noop"));
