@@ -62,7 +62,7 @@ static int dm_prepare_uuid(const char *type, const char *uuid, char *buf, size_t
 
 /* return number of holders in general, if matched dm_uuid prefix it's returned via dm_name */
 /* negative value is error */
-static int lookup_holder_dm_name(const char *dm_uuid, size_t max_len, const char *bdev, char *dm_name, size_t dm_name_length)
+static int lookup_holder_dm_name(const char *dm_uuid, size_t max_len, dev_t devno, char *dm_name, size_t dm_name_length)
 {
 	struct dirent *entry;
 	char dm_subpath[PATH_MAX], data_dev_dir[PATH_MAX], uuid[max_len];
@@ -76,7 +76,7 @@ static int lookup_holder_dm_name(const char *dm_uuid, size_t max_len, const char
 
 	*dm_name = '\0';
 
-	len = snprintf(data_dev_dir, PATH_MAX, "/sys/block/%s/holders", bdev);
+	len = snprintf(data_dev_dir, PATH_MAX, "/sys/dev/block/%u:%u/holders", major(devno), minor(devno));
 	if (len < 0 || len >= PATH_MAX)
 		return -EINVAL;
 
@@ -157,32 +157,11 @@ static int lookup_holder_dm_name(const char *dm_uuid, size_t max_len, const char
 	return r;
 }
 
-static char *lookup_kernel_name(dev_t devno)
-{
-	char link[PATH_MAX], path[PATH_MAX], *devname;
-	ssize_t len;
-
-	if (snprintf(path, sizeof(path), "/sys/dev/block/%u:%u", major(devno), minor(devno)) < 0)
-		return NULL;
-
-	len = readlink(path, link, sizeof(link) - 1);
-	if (len < 0)
-		return NULL;
-
-	link[len] = '\0';
-	devname = strrchr(link, '/');
-	if (!devname)
-		return NULL;
-	devname++;
-
-	return strdup(devname);
-}
-
 int tools_lookup_crypt_device(struct crypt_device *cd, const char *type,
 		const char *data_device_path, char *name, size_t name_length)
 {
 	int r;
-	char *c, *bdev;
+	char *c;
 	struct stat st;
 	char dev_uuid[DM_UUID_LEN + DM_BY_ID_PREFIX_LEN] = DM_BY_ID_PREFIX;
 
@@ -204,12 +183,7 @@ int tools_lookup_crypt_device(struct crypt_device *cd, const char *type,
 	if (!S_ISBLK(st.st_mode))
 		return -ENOTBLK;
 
-	bdev = lookup_kernel_name(st.st_rdev);
-	if (!bdev)
-		return -ENODEV;
-
 	r = lookup_holder_dm_name(dev_uuid + DM_BY_ID_PREFIX_LEN, DM_UUID_LEN,
-			bdev, name, name_length);
-	free(bdev);
+			st.st_rdev, name, name_length);
 	return r;
 }
