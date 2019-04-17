@@ -3701,42 +3701,38 @@ int luks2_check_device_size(struct crypt_device *cd, struct luks2_hdr *hdr, uint
 {
 	int r;
 	int64_t data_shift;
-	uint64_t tmp_size, check_size;
+	uint64_t check_size, real_size = 0;
 
 	/*
 	 * Calculate sum of all segments. The last dynamic segment adds one encryption sector to the sum
 	 * If there's only single dynamic segment it returns 0 which later reads data device size (minus offset)
 	 */
-	if (LUKS2_get_data_size(hdr, &tmp_size))
+	if (LUKS2_get_data_size(hdr, &check_size))
 		return -EINVAL;
-
-	check_size = tmp_size;
 
 	data_shift = LUKS2_reencrypt_data_shift(hdr);
 	/* initial data device reduction must be extended for spare space for data shift
 	 * layout looks like:
 	 * [LUKS2 hdr (data offset)][segment s with fixed size] [spare space for shift] [moved segment]
 	 */
-	if (data_shift < 0 && LUKS2_get_segment_id_by_flag(hdr, "reencrypt-moved-segment") >= 0)
-		check_size = tmp_size + (uint64_t)-data_shift;
+	if (LUKS2_get_segment_id_by_flag(hdr, "reencrypt-moved-segment") >= 0)
+		check_size += data_shift;
 
 	check_size >>= SECTOR_SHIFT;
 
+	/* Here we check minimal size */
 	r = device_block_adjust(cd, crypt_data_device(cd), activation ? DEV_EXCL : DEV_OK,
 				crypt_get_data_offset(cd), &check_size, NULL);
 
 	if (r)
 		return r;
 
-	if (!tmp_size) {
-		r = device_block_adjust(cd, crypt_data_device(cd), DEV_OK,
-					crypt_get_data_offset(cd), &tmp_size, NULL);
-		if (r)
-			return r;
-		tmp_size <<= SECTOR_SHIFT;
-	}
+	r = device_block_adjust(cd, crypt_data_device(cd), DEV_OK,
+				crypt_get_data_offset(cd), &real_size, NULL);
+	if (r)
+		return r;
 
-	*device_size = tmp_size;
+	*device_size = real_size << SECTOR_SHIFT;
 
 	return r;
 }
