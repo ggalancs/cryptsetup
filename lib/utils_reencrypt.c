@@ -181,10 +181,10 @@ static int _reenc_load(struct crypt_device *cd, struct luks2_hdr *hdr, struct lu
 		if (posix_memalign(&rh->rp.p.csum.checksums, device_alignment(crypt_metadata_device(cd)),
 				   rh->rp.p.csum.checksums_len))
 			return -ENOMEM;
-	} else if (!strcmp(params->resilience, "noop")) {
-		log_dbg(cd, "Initializaing reencryption context with noop resilience.");
+	} else if (!strcmp(params->resilience, "none")) {
+		log_dbg(cd, "Initializaing reencryption context with none resilience.");
 		rh->rp.type = REENC_PROTECTION_NOOP;
-		rh->rp.p.noop.hz_size = params->max_hotzone_size;
+		rh->rp.p.none.hz_size = params->max_hotzone_size;
 	} else
 		return -EINVAL;
 

@@ -96,7 +96,7 @@ static int opt_refresh = 0;
 
 /* LUKS2 reencryption parameters */
 static int opt_keep_key = 0;
-static size_t opt_hotzone_size_noop = 25 * 1024 * 1024; // TODO: default noop size
+static size_t opt_hotzone_size_none = 25 * 1024 * 1024; // TODO: default none size
 /* TODO (limit high memory usage during reencryption) static size_t opt_hotzone_size_max = 512 * 1024 * 1024; */
 static const char *opt_active_name = NULL;
 static const char *opt_resilience_mode = "checksum"; // TODO: default resilience
@@ -2436,7 +2436,7 @@ static int action_reencrypt_load(struct crypt_device *cd)
 	struct crypt_params_reencrypt params = {
 		.resilience = opt_resilience_mode,
 		.hash = opt_resilience_hash,
-		.max_hotzone_size = strcmp(opt_resilience_mode, "noop") ? 0 : opt_hotzone_size_noop
+		.max_hotzone_size = strcmp(opt_resilience_mode, "none") ? 0 : opt_hotzone_size_none
 	};
 
 	if (!opt_active_name) {
@@ -2477,7 +2477,7 @@ static int action_encrypt_luks2(struct crypt_device **cd)
 		.direction = opt_data_shift < 0 ? CRYPT_REENCRYPT_BACKWARD : CRYPT_REENCRYPT_FORWARD,
 		.resilience = opt_resilience_mode,
 		.hash = opt_resilience_hash,
-		.max_hotzone_size = strcmp(opt_resilience_mode, "noop") ? 0 : opt_hotzone_size_noop,
+		.max_hotzone_size = strcmp(opt_resilience_mode, "none") ? 0 : opt_hotzone_size_none,
 		.luks2 = &luks2_params,
 		.flags = CRYPT_REENCRYPT_INITIALIZE_ONLY
 	};
@@ -2646,7 +2646,7 @@ static int action_decrypt_luks2(struct crypt_device *cd)
 		.resilience = opt_data_shift ? "shift" : opt_resilience_mode,
 		.hash = opt_resilience_hash,
 		.data_shift = imaxabs(opt_data_shift) / SECTOR_SIZE,
-		.max_hotzone_size = strcmp(opt_resilience_mode, "noop") ? 0 : opt_hotzone_size_noop,
+		.max_hotzone_size = strcmp(opt_resilience_mode, "none") ? 0 : opt_hotzone_size_none,
 		.flags = opt_reencrypt_init_only ? CRYPT_REENCRYPT_INITIALIZE_ONLY : 0
 	};
 	size_t passwordLen;
@@ -2689,7 +2689,7 @@ static int action_reencrypt_luks2(struct crypt_device *cd)
 		.resilience = opt_data_shift ? "shift" : opt_resilience_mode,
 		.hash = opt_resilience_hash,
 		.data_shift = imaxabs(opt_data_shift) / SECTOR_SIZE,
-		.max_hotzone_size = strcmp(opt_resilience_mode, "noop") ? 0 : opt_hotzone_size_noop,
+		.max_hotzone_size = strcmp(opt_resilience_mode, "none") ? 0 : opt_hotzone_size_none,
 		.luks2 = &luks2_params,
 		.flags = opt_reencrypt_init_only ? CRYPT_REENCRYPT_INITIALIZE_ONLY : 0
 	};
@@ -3052,7 +3052,7 @@ int main(int argc, const char **argv)
 		{ "decrypt",	       '\0', POPT_ARG_NONE, &opt_decrypt,		0, N_("Decrypt LUKS2 device (remove encryption)."), NULL },
 		{ "init-only",         '\0', POPT_ARG_NONE, &opt_reencrypt_init_only,	0, N_("Initialize LUKS2 reencryption in metadata only."), NULL },
 		{ "reduce-device-size",'\0', POPT_ARG_STRING, &opt_reduce_size_str,     0, N_("Reduce data device size (move data offset). DANGEROUS!"), N_("bytes") },
-		{ "resilience",	       '\0', POPT_ARG_STRING, &opt_resilience_mode,     0, N_("Reencryption hotzone resilience type (checksum,journal,noop)"), NULL },
+		{ "resilience",	       '\0', POPT_ARG_STRING, &opt_resilience_mode,     0, N_("Reencryption hotzone resilience type (checksum,journal,none)"), NULL },
 		{ "resilience-hash",   '\0', POPT_ARG_STRING, &opt_resilience_hash,     0, N_("Reencryption hotzone checksums hash"), NULL },
 		{ "active-name",       '\0', POPT_ARG_STRING, &opt_active_name,		0, N_("Override device autodetection of dm device to be reencrypted"), NULL },
 		POPT_TABLEEND

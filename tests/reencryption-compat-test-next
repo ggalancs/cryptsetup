@@ -215,7 +215,7 @@ echo $PWD1 | $REENC $DEV -q $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH1
 echo $PWD1 | $REENC $DEV -q -s 256 -c twofish-cbc-plain --resilience journal $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH1
-echo $PWD1 | $REENC $DEV -q --resilience noop $FAST_PBKDF_ARGON || fail
+echo $PWD1 | $REENC $DEV -q --resilience none $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH1
 echo $PWD1 | $REENC $DEV -q -s 128 -c aes-cbc-plain --resilience checksum $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH1
@@ -228,7 +228,7 @@ echo $PWD1 | $REENC $DEV -q $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH1
 echo $PWD1 | $REENC $DEV -q -s 256 -c twofish-cbc-plain --resilience journal $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH1
-echo $PWD1 | $REENC $DEV -q --resilience noop $FAST_PBKDF_ARGON || fail
+echo $PWD1 | $REENC $DEV -q --resilience none $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH1
 echo $PWD1 | $REENC $DEV -q -s 128 -c aes-cbc-plain --resilience checksum $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH1
@@ -237,7 +237,7 @@ if [ -n "$DM_SECTOR_SIZE" ]; then
 	check_hash $PWD1 $HASH1
 	echo $PWD1 | $REENC $DEV -q -s 256 -c twofish-cbc-plain --resilience journal --sector-size 2048 $FAST_PBKDF_ARGON || fail
 	check_hash $PWD1 $HASH1
-	echo $PWD1 | $REENC $DEV -q --resilience noop $FAST_PBKDF_ARGON --sector-size 1024 || fail
+	echo $PWD1 | $REENC $DEV -q --resilience none $FAST_PBKDF_ARGON --sector-size 1024 || fail
 	check_hash $PWD1 $HASH1
 	echo $PWD1 | $REENC $DEV -q -s 128 -c aes-cbc-plain --resilience checksum --sector-size 512 $FAST_PBKDF_ARGON || fail
 	check_hash $PWD1 $HASH1
@@ -251,7 +251,7 @@ echo $PWD1 | $REENC $DEV -q $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH1
 echo $PWD1 | $REENC $DEV -q -s 256 -c twofish-cbc-plain --resilience journal $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH1
-echo $PWD1 | $REENC $DEV -q --resilience noop $FAST_PBKDF_ARGON || fail
+echo $PWD1 | $REENC $DEV -q --resilience none $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH1
 echo $PWD1 | $REENC $DEV -q -s 128 -c aes-cbc-plain --resilience checksum $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH1
@@ -268,7 +268,7 @@ echo $PWD1 | $REENC $DEV -q $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH2
 echo $PWD1 | $REENC $DEV -q -s 256 -c twofish-cbc-plain --resilience journal $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH2
-echo $PWD1 | $REENC $DEV -q --resilience noop $FAST_PBKDF_ARGON || fail
+echo $PWD1 | $REENC $DEV -q --resilience none $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH2
 echo $PWD1 | $REENC $DEV -q -s 128 -c aes-cbc-plain --resilience checksum $FAST_PBKDF_ARGON || fail
 check_hash $PWD1 $HASH2
@@ -277,7 +277,7 @@ if [ -n "$DM_SECTOR_SIZE" ]; then
 	check_hash $PWD1 $HASH2
 	echo $PWD1 | $REENC $DEV -q -s 256 -c twofish-cbc-plain --resilience journal --sector-size 2048 $FAST_PBKDF_ARGON || fail
 	check_hash $PWD1 $HASH2
-	echo $PWD1 | $REENC $DEV -q --resilience noop $FAST_PBKDF_ARGON --sector-size 1024 || fail
+	echo $PWD1 | $REENC $DEV -q --resilience none $FAST_PBKDF_ARGON --sector-size 1024 || fail
 	check_hash $PWD1 $HASH2
 	echo $PWD1 | $REENC $DEV -q -s 128 -c aes-cbc-plain --resilience checksum --sector-size 512 $FAST_PBKDF_ARGON || fail
 	check_hash $PWD1 $HASH2
@@ -328,7 +328,7 @@ wipe_dev $DEV
 echo $PWD1 | $REENC --encrypt --resilience journal --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 check_hash $PWD1 $HASH3 $IMG_HDR
 wipe_dev $DEV
-echo $PWD1 | $REENC --encrypt -c twofish-cbc-plain -s 128 --resilience noop --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
+echo $PWD1 | $REENC --encrypt -c twofish-cbc-plain -s 128 --resilience none --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 check_hash $PWD1 $HASH3 $IMG_HDR
 wipe_dev $DEV
 echo $PWD1 | $REENC --encrypt -c serpent-xts-plain --resilience checksum --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
@@ -340,7 +340,7 @@ echo $PWD1 | $REENC -c aes-cbc-essiv:sha256 -s 128 --header $IMG_HDR -q $FAST_PB
 check_hash $PWD1 $HASH3 $IMG_HDR
 echo $PWD1 | $REENC --resilience journal --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 check_hash $PWD1 $HASH3 $IMG_HDR
-echo $PWD1 | $REENC -c twofish-cbc-plain -s 128 --resilience noop --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
+echo $PWD1 | $REENC -c twofish-cbc-plain -s 128 --resilience none --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 check_hash $PWD1 $HASH3 $IMG_HDR
 echo $PWD1 | $REENC -c serpent-xts-plain --resilience checksum --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 check_hash $PWD1 $HASH3 $IMG_HDR
@@ -356,7 +356,7 @@ echo $PWD1 | $REENC -q --decrypt --resilience journal --header $IMG_HDR $DEV || 
 check_hash_dev $DEV $HASH3
 echo $PWD1 | $CRYPTSETUP luksFormat --type luks2 -c twofish-cbc-plain -s 128 --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 wipe $PWD1 $IMG_HDR
-echo $PWD1 | $REENC -q --decrypt --resilience noop --header $IMG_HDR $DEV || fail
+echo $PWD1 | $REENC -q --decrypt --resilience none --header $IMG_HDR $DEV || fail
 check_hash_dev $DEV $HASH3
 echo $PWD1 | $CRYPTSETUP luksFormat --type luks2 -c serpent-xts-plain --header $IMG_HDR -q $FAST_PBKDF_ARGON $DEV || fail
 wipe $PWD1 $IMG_HDR

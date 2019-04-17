@@ -70,7 +70,7 @@ int reenc_keyslot_alloc(struct crypt_device *cd,
 		json_object_object_add(jobj_area, "data_shift", json_object_new_uint64(params->data_shift << SECTOR_SHIFT));
 	} else
 		/* except data shift protection, initial setting is irrelevant. Type can be changed during reencryption */
-		json_object_object_add(jobj_area, "type", json_object_new_string("noop"));
+		json_object_object_add(jobj_area, "type", json_object_new_string("none"));
 
 	json_object_object_add(jobj_area, "offset", json_object_new_uint64(area_offset));
 	json_object_object_add(jobj_area, "size", json_object_new_uint64(area_length));
@@ -202,8 +202,8 @@ int reenc_keyslot_update(struct crypt_device *cd,
 		json_object_object_add(jobj_area, "hash", json_object_new_string(rh->rp.p.csum.hash));
 		json_object_object_add(jobj_area, "sector_size", json_object_new_int64(rh->alignment));
 	} else if (rh->rp.type == REENC_PROTECTION_NOOP) {
-		log_dbg(cd, "Updating reencrypt keyslot for noop protection.");
-		json_object_object_add(jobj_area, "type", json_object_new_string("noop"));
+		log_dbg(cd, "Updating reencrypt keyslot for none protection.");
+		json_object_object_add(jobj_area, "type", json_object_new_string("none"));
 		json_object_object_del(jobj_area, "hash");
 	} else if (rh->rp.type == REENC_PROTECTION_JOURNAL) {
 		log_dbg(cd, "Updating reencrypt keyslot for journal protection.");
@@ -338,7 +338,7 @@ int LUKS2_reencrypt_digest_old(struct luks2_hdr *hdr)
 	return _reencrypt_digest(hdr, 0);
 }
 
-/* noop, checksums, journal or shift */
+/* none, checksums, journal or shift */
 const char *LUKS2_reencrypt_protection_type(struct luks2_hdr *hdr)
 {
 	json_object *jobj_keyslot, *jobj_area, *jobj_type;

@@ -1820,7 +1820,7 @@ uint64_t LUKS2_get_reencrypt_length(struct luks2_hdr *hdr, struct luks2_reenc_co
 	uint64_t length;
 
 	if (rh->rp.type == REENC_PROTECTION_NOOP)
-		length = rh->rp.p.noop.hz_size;
+		length = rh->rp.p.none.hz_size;
 	else if (rh->rp.type == REENC_PROTECTION_CHECKSUM)
 		length = (keyslot_area_length / rh->rp.p.csum.hash_size - 1) * rh->alignment;
 	else if (rh->rp.type == REENC_PROTECTION_DATASHIFT)

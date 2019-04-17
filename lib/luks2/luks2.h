@@ -123,7 +123,7 @@ struct luks2_keyslot_params {
 };
 
 struct reenc_protection {
-	enum { REENC_PROTECTION_NOOP = 0, /* noop should be 0 always */
+	enum { REENC_PROTECTION_NOOP = 0, /* none should be 0 always */
 	       REENC_PROTECTION_CHECKSUM,
 	       REENC_PROTECTION_JOURNAL,
                REENC_PROTECTION_DATASHIFT } type;
@@ -131,7 +131,7 @@ struct reenc_protection {
 	union {
 	struct {
 		uint64_t hz_size;
-	} noop;
+	} none;
 	struct {
 		char hash[LUKS2_CHECKSUM_ALG_L]; // or include luks.h
 		struct crypt_hash *ch;

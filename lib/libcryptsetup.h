@@ -2116,10 +2116,10 @@ typedef enum {
 struct crypt_params_reencrypt {
 	const char *mode; /* "encrypt", "reencrypt" or "decrypt" (immutable after first init)*/
 	crypt_reencrypt_direction_info direction; /* (immutable after first init) */
-	const char *resilience; /* resilience mode. One of "noop", "checksum", "journal" or "shift" (only 'shift' is immutable after init) */
+	const char *resilience; /* resilience mode. One of "none", "checksum", "journal" or "shift" (only 'shift' is immutable after init) */
 	const char *hash; /* "checksum" resilience type only, otherwise ignored */
 	uint64_t data_shift; /* must not be zero with "shift" resilience (immutable after first init) */
-	uint64_t max_hotzone_size; /* "noop" resilience type hotzone size, max hotzine size otherwise */
+	uint64_t max_hotzone_size; /* "none" resilience type hotzone size, max hotzine size otherwise */
 	const struct crypt_params_luks2 *luks2;
 	uint32_t flags;
 };
