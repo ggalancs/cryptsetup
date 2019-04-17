@@ -199,11 +199,11 @@ static int _reenc_load(struct crypt_device *cd, struct luks2_hdr *hdr, struct lu
 	if (rh->length > device_size - rh->offset)
 		rh->length = device_size - rh->offset;
 
-	log_dbg(cd, "reencrypt-direction: %s", rh->direction == REENCRYPT_FORWARD ? "forward" : "backward");
+	log_dbg(cd, "reencrypt-direction: %s", rh->direction == CRYPT_REENCRYPT_FORWARD ? "forward" : "backward");
 
 	_load_backup_segments(hdr, rh);
 
-	if (rh->direction == REENCRYPT_BACKWARD)
+	if (rh->direction == CRYPT_REENCRYPT_BACKWARD)
 		rh->progress = device_size - rh->offset - rh->length;
 	else
 		rh->progress = rh->offset;
@@ -215,7 +215,7 @@ static int _reenc_load(struct crypt_device *cd, struct luks2_hdr *hdr, struct lu
 
 	log_dbg(cd, "reencrypt length: %" PRIu64, rh->length);
 	log_dbg(cd, "reencrypt offset: %" PRIu64, rh->offset);
-	log_dbg(cd, "reencrypt shift: %s%" PRIu64, (rh->data_shift && rh->direction == REENCRYPT_BACKWARD ? "-" : ""), rh->data_shift);
+	log_dbg(cd, "reencrypt shift: %s%" PRIu64, (rh->data_shift && rh->direction == CRYPT_REENCRYPT_BACKWARD ? "-" : ""), rh->data_shift);
 	log_dbg(cd, "reencrypt alignemnt: %zu", rh->alignment);
 	log_dbg(cd, "reencrypt progress: %" PRIu64, rh->progress);
 
@@ -429,10 +429,10 @@ static int modify_offset(uint64_t *offset, uint64_t data_shift, crypt_reencrypt_
 	if (!offset)
 		return r;
 
-	if (di == REENCRYPT_FORWARD) {
+	if (di == CRYPT_REENCRYPT_FORWARD) {
 		*offset += data_shift;
 		r = 0;
-	} else if (di == REENCRYPT_BACKWARD) {
+	} else if (di == CRYPT_REENCRYPT_BACKWARD) {
 		if (*offset >= data_shift) {
 			*offset -= data_shift;
 			r = 0;
@@ -871,7 +871,7 @@ static int _encrypt_set_segments(struct crypt_device *cd, struct luks2_hdr *hdr,
 	if (dev_size < data_shift)
 		return -EINVAL;
 
-	if (data_shift && (di == REENCRYPT_FORWARD))
+	if (data_shift && (di == CRYPT_REENCRYPT_FORWARD))
 		return -ENOTSUP;
 
 	if (move_first_segment) {
@@ -1499,14 +1499,14 @@ static int parse_reencryption_mode(const char *mode)
 static int atomic_get_reencryption_flag(struct crypt_device *cd)
 {
 	int r;
-	luks2_reencrypt_info ri;
+	crypt_reencrypt_info ri;
 
 	r = crypt_load(cd, CRYPT_LUKS2, NULL);
 	if (r)
 		return r;
 
 	ri = LUKS2_reenc_status(crypt_get_hdr(cd, CRYPT_LUKS2));
-	if (ri > REENCRYPT_NONE)
+	if (ri > CRYPT_REENCRYPT_NONE)
 		return -EBUSY;
 
 	return 0;
@@ -1728,7 +1728,7 @@ static int _update_reencrypt_context(struct crypt_device *cd,
 	if (rh->read < 0)
 		return -EINVAL;
 
-	if (rh->direction == REENCRYPT_BACKWARD) {
+	if (rh->direction == CRYPT_REENCRYPT_BACKWARD) {
 		if (rh->data_shift && rh->type == ENCRYPT /* && moved segment */) {
 			if (rh->offset)
 				rh->offset -= rh->data_shift;
@@ -1743,7 +1743,7 @@ static int _update_reencrypt_context(struct crypt_device *cd,
 				rh->length = rh->offset;
 			rh->offset -= rh->length;
 		}
-	} else if (rh->direction == REENCRYPT_FORWARD) {
+	} else if (rh->direction == CRYPT_REENCRYPT_FORWARD) {
 		rh->offset += (uint64_t)rh->read;
 		/* it fails in-case of device_size < rh->offset later */
 		if (rh->device_size - rh->offset < rh->length)
@@ -1808,11 +1808,11 @@ int LUKS2_reenc_load(struct crypt_device *cd, struct luks2_hdr *hdr,
 {
 	int r;
 	struct luks2_reenc_context *tmp = NULL;
-	luks2_reencrypt_info ri = LUKS2_reenc_status(hdr);
+	crypt_reencrypt_info ri = LUKS2_reenc_status(hdr);
 
-	if (ri == REENCRYPT_CLEAN)
+	if (ri == CRYPT_REENCRYPT_CLEAN)
 		r = _LUKS2_reenc_load(cd, hdr, device_size, &tmp, params);
-	else if (ri == REENCRYPT_CRASH)
+	else if (ri == CRYPT_REENCRYPT_CRASH)
 		r = LUKS2_reenc_load_crashed(cd, hdr, device_size, &tmp);
 	else
 		r = -EINVAL;
@@ -1858,15 +1858,15 @@ static int reencrypt_lock_and_verify(struct crypt_device *cd, struct luks2_hdr *
 		struct crypt_lock_handle **reencrypt_lock)
 {
 	int r;
-	luks2_reencrypt_info ri;
+	crypt_reencrypt_info ri;
 	struct crypt_lock_handle *h;
 
 	ri = LUKS2_reenc_status(hdr);
-	if (ri == REENCRYPT_INVALID) {
+	if (ri == CRYPT_REENCRYPT_INVALID) {
 		log_err(cd, "Failed to read reencryption state.");
 		return -EINVAL;
 	}
-	if (ri < REENCRYPT_CLEAN) {
+	if (ri < CRYPT_REENCRYPT_CLEAN) {
 		log_err(cd, "Device is not in reencryption.");
 		return -EINVAL;
 	}
@@ -1888,7 +1888,7 @@ static int reencrypt_lock_and_verify(struct crypt_device *cd, struct luks2_hdr *
 	}
 
 	ri = LUKS2_reenc_status(hdr);
-	if (ri == REENCRYPT_CLEAN) {
+	if (ri == CRYPT_REENCRYPT_CLEAN) {
 		*reencrypt_lock = h;
 		return 0;
 	}
@@ -2286,7 +2286,7 @@ int crypt_reencrypt(struct crypt_device *cd,
 		    int (*progress)(uint64_t size, uint64_t offset, void *usrptr))
 {
 	int r, excl_devfd = -1;
-	luks2_reencrypt_info ri;
+	crypt_reencrypt_info ri;
 	struct luks2_hdr *hdr;
 	struct luks2_reenc_context *rh;
 	reenc_status_t rs;
@@ -2298,7 +2298,7 @@ int crypt_reencrypt(struct crypt_device *cd,
 	hdr = crypt_get_hdr(cd, CRYPT_LUKS2);
 
 	ri = LUKS2_reenc_status(hdr);
-	if (ri > REENCRYPT_CLEAN) {
+	if (ri > CRYPT_REENCRYPT_CLEAN) {
 		log_err(cd, "Can't resume reencryption. Unexpected reencryption status.");
 		return -EINVAL;
 	}

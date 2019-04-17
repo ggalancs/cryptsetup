@@ -209,7 +209,7 @@ int LUKS2_reenc_load_segments(struct crypt_device *cd,
 				struct luks2_hdr *hdr,
 			        struct luks2_reenc_context *rh);
 
-luks2_reencrypt_info LUKS2_reenc_status(struct luks2_hdr *hdr);
+crypt_reencrypt_info LUKS2_reenc_status(struct luks2_hdr *hdr);
 /*
  * Supportable header sizes (hdr_disk + JSON area)
  * Also used as offset for the 2nd header.

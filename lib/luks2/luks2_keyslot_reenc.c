@@ -78,9 +78,9 @@ int reenc_keyslot_alloc(struct crypt_device *cd,
 	json_object_object_add(jobj_keyslot, "type", json_object_new_string("reencrypt"));
 	json_object_object_add(jobj_keyslot, "key_size", json_object_new_int(1)); /* useless but mandatory */
 	json_object_object_add(jobj_keyslot, "mode", json_object_new_string(params->mode));
-	if (params->direction == REENCRYPT_FORWARD)
+	if (params->direction == CRYPT_REENCRYPT_FORWARD)
 		json_object_object_add(jobj_keyslot, "direction", json_object_new_string("forward"));
-	else if (params->direction == REENCRYPT_BACKWARD)
+	else if (params->direction == CRYPT_REENCRYPT_BACKWARD)
 		json_object_object_add(jobj_keyslot, "direction", json_object_new_string("backward"));
 	else
 		return -EINVAL;
@@ -753,13 +753,13 @@ static int LUKS2_reenc_create_segments_pre(struct crypt_device *cd,
 {
 	rh->jobj_segs_pre = NULL;
 
-	if (rh->type == ENCRYPT && rh->direction == REENCRYPT_BACKWARD && rh->data_shift && rh->jobj_segment_moved) {
+	if (rh->type == ENCRYPT && rh->direction == CRYPT_REENCRYPT_BACKWARD && rh->data_shift && rh->jobj_segment_moved) {
 		log_dbg(cd, "Calculating hot segments for encryption with data move.");
 		rh->jobj_segs_pre = _enc_create_segments_shift_pre(cd, hdr, rh, data_offset);
-	} else if (rh->direction == REENCRYPT_FORWARD) {
+	} else if (rh->direction == CRYPT_REENCRYPT_FORWARD) {
 		log_dbg(cd, "Calculating hot segments (forward direction).");
 		rh->jobj_segs_pre = _reenc_segments_forward_pre(cd, hdr, rh, device_size, data_offset);
-	} else if (rh->direction == REENCRYPT_BACKWARD) {
+	} else if (rh->direction == CRYPT_REENCRYPT_BACKWARD) {
 		log_dbg(cd, "Calculating hot segments (backward direction).");
 		rh->jobj_segs_pre = _reenc_segments_backward_pre(cd, hdr, rh, device_size, data_offset);
 	}
@@ -774,13 +774,13 @@ int LUKS2_reenc_create_segments_after(struct crypt_device *cd,
 {
 	rh->jobj_segs_after = NULL;
 
-	if (rh->type == ENCRYPT && rh->direction == REENCRYPT_BACKWARD && rh->data_shift && rh->jobj_segment_moved) {
+	if (rh->type == ENCRYPT && rh->direction == CRYPT_REENCRYPT_BACKWARD && rh->data_shift && rh->jobj_segment_moved) {
 		log_dbg(cd, "Calculating 'after' segments for encryption with data move.");
 		rh->jobj_segs_after = _enc_create_segments_shift_after(cd, hdr, rh, data_offset);
-	} else if (rh->direction == REENCRYPT_FORWARD) {
+	} else if (rh->direction == CRYPT_REENCRYPT_FORWARD) {
 		log_dbg(cd, "Calculating 'after' segments (forward direction).");
 		rh->jobj_segs_after = _reenc_segments_forward_after(cd, hdr, rh, data_offset);
-	} else if (rh->direction == REENCRYPT_BACKWARD) {
+	} else if (rh->direction == CRYPT_REENCRYPT_BACKWARD) {
 		log_dbg(cd, "Calculating 'after' segments (backward direction).");
 		rh->jobj_segs_after = _reenc_segments_backward_after(cd, hdr, rh, data_offset);
 	}
@@ -852,10 +852,10 @@ int LUKS2_reencrypt_direction(struct luks2_hdr *hdr, crypt_reencrypt_direction_i
 	value = json_object_get_string(jobj_mode);
 
 	if (!strcmp(value, "forward")) {
-		*di = REENCRYPT_FORWARD;
+		*di = CRYPT_REENCRYPT_FORWARD;
 		r = 0;
 	} else if (!strcmp(value, "backward")) {
-		*di = REENCRYPT_BACKWARD;
+		*di = CRYPT_REENCRYPT_BACKWARD;
 		r = 0;
 	} else
 		r = -EINVAL;

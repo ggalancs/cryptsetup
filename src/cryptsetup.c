@@ -2474,7 +2474,7 @@ static int action_encrypt_luks2(struct crypt_device **cd)
 	};
 	struct crypt_params_reencrypt params = {
 		.mode = "encrypt",
-		.direction = opt_data_shift < 0 ? REENCRYPT_BACKWARD : REENCRYPT_FORWARD,
+		.direction = opt_data_shift < 0 ? CRYPT_REENCRYPT_BACKWARD : CRYPT_REENCRYPT_FORWARD,
 		.resilience = opt_resilience_mode,
 		.hash = opt_resilience_hash,
 		.max_hotzone_size = strcmp(opt_resilience_mode, "noop") ? 0 : opt_hotzone_size_noop,
@@ -2642,7 +2642,7 @@ static int action_decrypt_luks2(struct crypt_device *cd)
 	const char *active_name = NULL;
 	struct crypt_params_reencrypt params = {
 		.mode = "decrypt",
-		.direction = opt_data_shift > 0 ? REENCRYPT_FORWARD : REENCRYPT_BACKWARD,
+		.direction = opt_data_shift > 0 ? CRYPT_REENCRYPT_FORWARD : CRYPT_REENCRYPT_BACKWARD,
 		.resilience = opt_data_shift ? "shift" : opt_resilience_mode,
 		.hash = opt_resilience_hash,
 		.data_shift = imaxabs(opt_data_shift) / SECTOR_SIZE,
@@ -2685,7 +2685,7 @@ static int action_reencrypt_luks2(struct crypt_device *cd)
 	struct crypt_params_luks2 luks2_params = {};
 	struct crypt_params_reencrypt params = {
 		.mode = "reencrypt",
-		.direction = opt_data_shift < 0 ? REENCRYPT_BACKWARD : REENCRYPT_FORWARD,
+		.direction = opt_data_shift < 0 ? CRYPT_REENCRYPT_BACKWARD : CRYPT_REENCRYPT_FORWARD,
 		.resilience = opt_data_shift ? "shift" : opt_resilience_mode,
 		.hash = opt_resilience_hash,
 		.data_shift = imaxabs(opt_data_shift) / SECTOR_SIZE,

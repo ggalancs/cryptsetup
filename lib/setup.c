@@ -3748,7 +3748,7 @@ static int _open_and_activate_reencrypt_device(struct crypt_device *cd,
 	size_t passphrase_size,
 	uint32_t flags)
 {
-	luks2_reencrypt_info ri;
+	crypt_reencrypt_info ri;
 	uint64_t device_size;
 	bool use_keyring, keys_ready = false;
 	struct volume_key *vks = NULL;
@@ -3775,7 +3775,7 @@ static int _open_and_activate_reencrypt_device(struct crypt_device *cd,
 	if (name && (r = luks2_check_device_size(cd, hdr, &device_size, true)))
 		goto err;
 
-	if (name && ri == REENCRYPT_CRASH) {
+	if (name && ri == CRYPT_REENCRYPT_CRASH) {
 		log_dbg(cd, "Entering reencryption crash recovery.");
 
 		r = LUKS2_reenc_load(cd, hdr, device_size, NULL, &rh);
@@ -3820,13 +3820,13 @@ static int _open_and_activate_reencrypt_device(struct crypt_device *cd,
 	}
 
 	/* recovery finished reencryption or it's already finished */
-	if (ri == REENCRYPT_NONE) {
+	if (ri == CRYPT_REENCRYPT_NONE) {
 		crypt_free_volume_key(vks);
 		crypt_reencrypt_unlock(cd, reencrypt_lock);
 		return _open_and_activate(cd, keyslot, name, passphrase, passphrase_size, flags);
 	}
 
-	if (ri > REENCRYPT_CLEAN && name) {
+	if (ri > CRYPT_REENCRYPT_CLEAN && name) {
 		r = -EINVAL;
 		goto err;
 	}
@@ -3876,15 +3876,15 @@ static int _open_and_activate_luks2(struct crypt_device *cd,
 	size_t passphrase_size,
 	uint32_t flags)
 {
-	luks2_reencrypt_info ri;
+	crypt_reencrypt_info ri;
 	int r;
 	struct luks2_hdr *hdr = &cd->u.luks2.hdr;
 
 	ri = LUKS2_reenc_status(hdr);
-	if (ri == REENCRYPT_INVALID)
+	if (ri == CRYPT_REENCRYPT_INVALID)
 		return -EINVAL;
 
-	if (ri > REENCRYPT_NONE)
+	if (ri > CRYPT_REENCRYPT_NONE)
 		r = _open_and_activate_reencrypt_device(cd, keyslot, name, passphrase,
 				passphrase_size, flags);
 	else
@@ -5784,19 +5784,19 @@ void crypt_serialize_unlock(struct crypt_device *cd)
 	cd->pbkdf_memory_hard_lock = NULL;
 }
 
-luks2_reencrypt_info crypt_reencrypt_status(struct crypt_device *cd,
+crypt_reencrypt_info crypt_reencrypt_status(struct crypt_device *cd,
 		struct crypt_params_reencrypt *params)
 {
-	luks2_reencrypt_info ri;
+	crypt_reencrypt_info ri;
 	struct luks2_hdr *hdr;
 
 	if (_onlyLUKS2(cd, CRYPT_CD_QUIET, CRYPT_REQUIREMENT_ONLINE_REENCRYPT))
-		return REENCRYPT_INVALID;
+		return CRYPT_REENCRYPT_INVALID;
 
 	hdr = crypt_get_hdr(cd, CRYPT_LUKS2);
 
 	ri = LUKS2_reenc_status(hdr);
-	if (ri == REENCRYPT_NONE || ri == REENCRYPT_INVALID || !params)
+	if (ri == CRYPT_REENCRYPT_NONE || ri == CRYPT_REENCRYPT_INVALID || !params)
 		return ri;
 
 	params->mode = LUKS2_reencrypt_mode(hdr);

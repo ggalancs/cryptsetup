@@ -1698,7 +1698,7 @@ const char *LUKS2_get_cipher(struct luks2_hdr *hdr, int segment)
 	return json_segment_get_cipher(jobj_segment) ?: "null";
 }
 
-luks2_reencrypt_info LUKS2_reenc_status(struct luks2_hdr *hdr)
+crypt_reencrypt_info LUKS2_reenc_status(struct luks2_hdr *hdr)
 {
 	uint32_t reqs;
 
@@ -1707,15 +1707,15 @@ luks2_reencrypt_info LUKS2_reenc_status(struct luks2_hdr *hdr)
 	 * anything related to online-reencryption handling
 	 */
 	if (LUKS2_config_get_requirements(NULL, hdr, &reqs))
-		return REENCRYPT_INVALID;
+		return CRYPT_REENCRYPT_INVALID;
 
 	if (!reqs_reencrypt_online(reqs))
-		return REENCRYPT_NONE;
+		return CRYPT_REENCRYPT_NONE;
 
 	if (json_segments_segment_in_reencrypt(LUKS2_get_segments_jobj(hdr)) < 0)
-		return REENCRYPT_CLEAN;
+		return CRYPT_REENCRYPT_CLEAN;
 
-	return REENCRYPT_CRASH;
+	return CRYPT_REENCRYPT_CRASH;
 }
 
 static int _offset_backward_moved(struct luks2_hdr *hdr, json_object *jobj_segments, uint64_t *reencrypt_length, uint64_t data_shift, uint64_t *offset)
@@ -1804,9 +1804,9 @@ int LUKS2_get_reencrypt_offset(struct luks2_hdr *hdr, crypt_reencrypt_direction_
 		return 0;
 	}
 
-	if (di == REENCRYPT_FORWARD)
+	if (di == CRYPT_REENCRYPT_FORWARD)
 		return _offset_forward(hdr, jobj_segments, offset);
-	else if (di == REENCRYPT_BACKWARD) {
+	else if (di == CRYPT_REENCRYPT_BACKWARD) {
 		if (!strcmp(LUKS2_reencrypt_mode(hdr), "encrypt") && LUKS2_get_segment_id_by_flag(hdr, "reencrypt-moved-segment") >= 0)
 			return _offset_backward_moved(hdr, jobj_segments, reencrypt_length, data_shift, offset);
 		return _offset_backward(hdr, jobj_segments, device_size, reencrypt_length, offset);
