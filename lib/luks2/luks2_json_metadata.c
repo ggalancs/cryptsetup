@@ -1815,18 +1815,21 @@ int LUKS2_get_reencrypt_offset(struct luks2_hdr *hdr, crypt_reencrypt_direction_
 	return -EINVAL;
 }
 
-uint64_t LUKS2_get_reencrypt_length(struct luks2_hdr *hdr, struct luks2_reenc_context *rh, uint64_t keyslot_area_length)
+uint64_t LUKS2_get_reencrypt_length(struct luks2_hdr *hdr, struct luks2_reenc_context *rh, uint64_t keyslot_area_length, uint64_t length_max)
 {
 	uint64_t length;
 
 	if (rh->rp.type == REENC_PROTECTION_NOOP)
-		length = rh->rp.p.none.hz_size;
+		length = length_max;
 	else if (rh->rp.type == REENC_PROTECTION_CHECKSUM)
 		length = (keyslot_area_length / rh->rp.p.csum.hash_size - 1) * rh->alignment;
 	else if (rh->rp.type == REENC_PROTECTION_DATASHIFT)
-		length = LUKS2_reencrypt_data_shift(hdr);
+		return LUKS2_reencrypt_data_shift(hdr);
 	else
 		length = keyslot_area_length;
+
+	if (length_max && length > length_max)
+		length = length_max;
 
 	length -= (length % rh->alignment);
 

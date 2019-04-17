@@ -130,7 +130,6 @@ struct reenc_protection {
 
 	union {
 	struct {
-		uint64_t hz_size;
 	} none;
 	struct {
 		char hash[LUKS2_CHECKSUM_ALG_L]; // or include luks.h
@@ -142,8 +141,6 @@ struct reenc_protection {
 		size_t checksums_len;
 	} csum;
 	struct {
-		uint64_t hz_size;
-		uint64_t last_shift;
 	} ds;
 	} p;
 };
@@ -556,7 +553,7 @@ int LUKS2_wipe_header_areas(struct crypt_device *cd,
 uint64_t LUKS2_get_data_offset(struct luks2_hdr *hdr);
 int LUKS2_get_data_size(struct luks2_hdr *hdr, uint64_t *size);
 int LUKS2_get_reencrypt_offset(struct luks2_hdr *hdr, crypt_reencrypt_direction_info di, uint64_t device_size, uint64_t *reencrypt_length, uint64_t *offset);
-uint64_t LUKS2_get_reencrypt_length(struct luks2_hdr *hdr, struct luks2_reenc_context *rh, uint64_t length);
+uint64_t LUKS2_get_reencrypt_length(struct luks2_hdr *hdr, struct luks2_reenc_context *rh, uint64_t length, uint64_t length_max);
 int LUKS2_get_sector_size(struct luks2_hdr *hdr);
 const char *LUKS2_get_cipher(struct luks2_hdr *hdr, int segment);
 const char *LUKS2_get_integrity(struct luks2_hdr *hdr, int segment);

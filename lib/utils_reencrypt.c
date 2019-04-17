@@ -166,16 +166,18 @@ static int _reenc_load(struct crypt_device *cd, struct luks2_hdr *hdr, struct lu
 			log_dbg(cd, "Invalid hash parameter");
 			return -EINVAL;
 		}
+
+		if (crypt_hash_init(&rh->rp.p.csum.ch, params->hash)) {
+			log_dbg(cd, "Failed to initialize checksum resilience hash %s", params->hash);
+			return -EINVAL;
+		}
+
 		r = crypt_hash_size(params->hash);
 		if (r < 1) {
 			log_dbg(cd, "Invalid hash size");
 			return -EINVAL;
 		}
 		rh->rp.p.csum.hash_size = r;
-		if (crypt_hash_init(&rh->rp.p.csum.ch, params->hash)) {
-			log_dbg(cd, "Failed to init hash %s", params->hash);
-			return -EINVAL;
-		}
 
 		rh->rp.p.csum.checksums_len = area_length;
 		if (posix_memalign(&rh->rp.p.csum.checksums, device_alignment(crypt_metadata_device(cd)),
@@ -183,12 +185,13 @@ static int _reenc_load(struct crypt_device *cd, struct luks2_hdr *hdr, struct lu
 			return -ENOMEM;
 	} else if (!strcmp(params->resilience, "none")) {
 		log_dbg(cd, "Initializaing reencryption context with none resilience.");
+		if (!params->max_hotzone_size)
+			return -EINVAL;
 		rh->rp.type = REENC_PROTECTION_NOOP;
-		rh->rp.p.none.hz_size = params->max_hotzone_size;
 	} else
 		return -EINVAL;
 
-	rh->length = LUKS2_get_reencrypt_length(hdr, rh, area_length);
+	rh->length = LUKS2_get_reencrypt_length(hdr, rh, area_length, params->max_hotzone_size);
 	if (LUKS2_get_reencrypt_offset(hdr, rh->direction, device_size, &rh->length, &rh->offset)) {
 		log_err(cd, "Failed to get reencryption offset.");
 		return -EINVAL;
