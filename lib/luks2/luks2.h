@@ -383,6 +383,8 @@ uint64_t json_segment_get_size(json_object *jobj_segment, unsigned blockwise);
 const char *json_segment_get_cipher(json_object *jobj_segment);
 int json_segment_get_sector_size(json_object *jobj_segment);
 json_object *json_segment_get_flags(json_object *jobj_segment);
+bool json_segment_is_backup(json_object *jobj_segment);
+bool json_segment_is_reencrypt(json_object *jobj_segment);
 json_object *json_segments_get_segment(json_object *jobj_segments, int segment);
 int json_segments_count(json_object *jobj_segments);
 json_object *json_segments_get_segment_by_flag(json_object *jobj_segments, const char *flag);
@@ -401,8 +403,6 @@ int LUKS2_segment_set_flag(json_object *jobj_segment, const char *flag);
 json_object *LUKS2_get_segment_by_flag(struct luks2_hdr *hdr, const char *flag);
 
 int LUKS2_get_segment_id_by_flag(struct luks2_hdr *hdr, const char *flag);
-
-int LUKS2_segment_ignore(json_object *jobj_segment);
 
 json_object *LUKS2_get_ignored_segments(struct luks2_hdr *hdr);
 

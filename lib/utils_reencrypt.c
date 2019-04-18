@@ -314,7 +314,7 @@ static int _load_segments_crashed(struct crypt_device *cd,
 		return -ENOMEM;
 
 	json_object_object_foreach(LUKS2_get_segments_jobj(hdr), key, val) {
-		if (LUKS2_segment_ignore(val))
+		if (json_segment_is_backup(val))
 			continue;
 		json_object_object_add(rh->jobj_segs_pre, key, json_object_get(val));
 	}

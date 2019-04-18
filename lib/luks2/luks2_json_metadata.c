@@ -555,18 +555,49 @@ static int hdr_validate_crypt_segment(struct crypt_device *cd,
 	return !segment_has_digest(key, jobj_digests);
 }
 
+static bool validate_segment_intervals(struct crypt_device *cd,
+				    int length, const struct interval *ix)
+{
+	int j, i = 0;
+
+	while (i < length) {
+		if (ix[i].length == UINT64_MAX && (i != (length - 1))) {
+			log_dbg(cd, "Only last regular segment is allowed to have 'dynamic' size.");
+			return false;
+		}
+
+		for (j = 0; j < length; j++) {
+			if (i == j)
+				continue;
+			if ((ix[i].offset >= ix[j].offset) && (ix[j].length == UINT64_MAX || (ix[i].offset < (ix[j].offset + ix[j].length)))) {
+				log_dbg(cd, "Overlapping segments [%" PRIu64 ",%" PRIu64 "]%s and [%" PRIu64 ",%" PRIu64 "]%s.",
+					ix[i].offset, ix[i].offset + ix[i].length, ix[i].length == UINT64_MAX ? "(dynamic)" : "",
+					ix[j].offset, ix[j].offset + ix[j].length, ix[j].length == UINT64_MAX ? "(dynamic)" : "");
+				return false;
+			}
+		}
+
+		i++;
+	}
+
+	return true;
+}
+
 static int hdr_validate_segments(struct crypt_device *cd, json_object *hdr_jobj)
 {
-	json_object *jobj, *jobj_digests, *jobj_offset, *jobj_size, *jobj_type, *jobj_flags;
-	int i;
+	json_object *jobj_segments, *jobj_digests, *jobj_offset, *jobj_size, *jobj_type, *jobj_flags;
+	struct interval *intervals;
 	uint64_t offset, size;
+	int i, r, count, first_backup = -1;
+	bool reencrypt_exists = false;
 
-	if (!json_object_object_get_ex(hdr_jobj, "segments", &jobj)) {
+	if (!json_object_object_get_ex(hdr_jobj, "segments", &jobj_segments)) {
 		log_dbg(cd, "Missing segments section.");
 		return 1;
 	}
 
-	if (json_object_object_length(jobj) < 1) {
+	count = json_object_object_length(jobj_segments);
+	if (count < 1) {
 		log_dbg(cd, "Empty segments section.");
 		return 1;
 	}
@@ -575,7 +606,7 @@ static int hdr_validate_segments(struct crypt_device *cd, json_object *hdr_jobj)
 	if (!json_object_object_get_ex(hdr_jobj, "digests", &jobj_digests))
 		return 1;
 
-	json_object_object_foreach(jobj, key, val) {
+	json_object_object_foreach(jobj_segments, key, val) {
 		if (!numbered(cd, "Segment", key))
 			return 1;
 
@@ -616,13 +647,58 @@ static int hdr_validate_segments(struct crypt_device *cd, json_object *hdr_jobj)
 					return 1;
 		}
 
+		i = atoi(key);
+		if (json_segment_is_backup(val)) {
+			if (first_backup < 0 || i < first_backup)
+				first_backup = i;
+		} else {
+			if ((first_backup >= 0) && i >= first_backup) {
+				log_dbg(cd, "Regular segment at %d behind backup segment at %d", i, first_backup);
+				return 1;
+			}
+			if (json_segment_is_reencrypt(val)) {
+				if (reencrypt_exists) {
+					log_dbg(cd, "Multiple reencrypt segments.");
+					return 1;
+				} else
+					reencrypt_exists = true;
+				if (!size) {
+					log_dbg(cd, "Reencrypt segments must have fixed size.");
+					return 1;
+				}
+			}
+		}
+
 		/* crypt */
 		if (!strcmp(json_object_get_string(jobj_type), "crypt") &&
 		    hdr_validate_crypt_segment(cd, val, key, jobj_digests, offset, size))
 			return 1;
 	}
 
-	return 0;
+	if (first_backup == 0) {
+		log_dbg(cd, "No regular segments.");
+		return 1;
+	}
+
+	if (first_backup > 0)
+		count = first_backup;
+
+	intervals = malloc(count * sizeof(*intervals));
+	if (!intervals) {
+		log_dbg(cd, "Not enough memory.");
+		return 1;
+	}
+
+	for (i = 0; i < count ; i++) {
+		intervals[i].offset = json_segment_get_offset(json_segments_get_segment(jobj_segments, i), 0);
+		intervals[i].length = json_segment_get_size(json_segments_get_segment(jobj_segments, i), 0) ?: UINT64_MAX;
+	}
+
+	r = !validate_segment_intervals(cd, count, intervals);
+
+	free(intervals);
+
+	return r;
 }
 
 uint64_t LUKS2_metadata_size(json_object *jobj)
@@ -1638,7 +1714,7 @@ int LUKS2_get_data_size(struct luks2_hdr *hdr, uint64_t *size)
 
 	json_object_object_foreach(jobj_segments, key, val) {
 		UNUSED(key);
-		if (LUKS2_segment_ignore(val))
+		if (json_segment_is_backup(val))
 			continue;
 
 		json_object_object_get_ex(val, "size", &jobj_size);
