@@ -137,7 +137,6 @@ struct reenc_protection {
 		size_t hash_size;
 		/* buffer for checksums */
 		void *checksums;
-		void *last_checksum;
 		size_t checksums_len;
 	} csum;
 	struct {

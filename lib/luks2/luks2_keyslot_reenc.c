@@ -150,7 +150,7 @@ static int reenc_keyslot_store(struct crypt_device *cd,
 	int keyslot,
 	const char *password __attribute__((unused)),
 	size_t password_len __attribute__((unused)),
-	const char *buffer, /* checksums or old ciphertext backup */
+	const char *buffer,
 	size_t buffer_len)
 {
 	struct luks2_hdr *hdr;

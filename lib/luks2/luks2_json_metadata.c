@@ -1822,7 +1822,7 @@ uint64_t LUKS2_get_reencrypt_length(struct luks2_hdr *hdr, struct luks2_reenc_co
 	if (rh->rp.type == REENC_PROTECTION_NOOP)
 		length = length_max;
 	else if (rh->rp.type == REENC_PROTECTION_CHECKSUM)
-		length = (keyslot_area_length / rh->rp.p.csum.hash_size - 1) * rh->alignment;
+		length = (keyslot_area_length / rh->rp.p.csum.hash_size) * rh->alignment;
 	else if (rh->rp.type == REENC_PROTECTION_DATASHIFT)
 		return LUKS2_reencrypt_data_shift(hdr);
 	else

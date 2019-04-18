@@ -383,11 +383,6 @@ static int _init_storage_wrappers(struct crypt_device *cd,
 	rh->wflags1 = wrapper_flags | OPEN_READONLY;
 	log_dbg(cd, "Old cipher storage wrapper type: %d.", crypt_storage_wrapper_get_type(rh->cw1));
 
-	if (rh->rp.type == REENC_PROTECTION_CHECKSUM) {
-		wrapper_flags &= ~DISABLE_KCAPI;
-		wrapper_flags |= DISABLE_DMCRYPT;
-	}
-
 	vk = crypt_volume_key_by_id(vks, rh->digest_new);
 	r = crypt_storage_wrapper_init(cd, &rh->cw2, crypt_data_device(cd),
 			LUKS2_reencrypt_get_data_offset_new(hdr),
@@ -508,7 +503,7 @@ int LUKS2_reenc_recover(struct crypt_device *cd,
 		}
 
 		count = rh->length / rh->alignment;
-		area_length_read = (count + 1) * rh->rp.p.csum.hash_size;
+		area_length_read = count * rh->rp.p.csum.hash_size;
 		if (area_length_read > area_length) {
 			log_dbg(cd, "Internal error in calculated area_length.");
 			r = -EINVAL;
@@ -571,30 +566,6 @@ int LUKS2_reenc_recover(struct crypt_device *cd,
 				}
 			}
 		}
-
-		read = crypt_storage_wrapper_read(cw2, 0, data_buffer, rh->length);
-		if (read < 0 || (size_t)read != rh->length) {
-			log_err(cd, "Failed to read hotzone area after recovery attempt.");
-			r = -EINVAL;
-			goto out;
-		}
-
-		if (crypt_hash_write(rh->rp.p.csum.ch, data_buffer, rh->length)) {
-			log_err(cd, "Failed to write final hash.");
-			r = EINVAL;
-			goto out;
-		}
-		if (crypt_hash_final(rh->rp.p.csum.ch, checksum_tmp, rh->rp.p.csum.hash_size)) {
-			log_err(cd, "Failed to finalize final hash.");
-			r = EINVAL;
-			goto out;
-		}
-
-		if (memcmp(checksum_tmp, (char *)rh->rp.p.csum.checksums + (s * rh->rp.p.csum.hash_size), rh->rp.p.csum.hash_size))
-			/* TODO: so....what next? */
-			log_err(cd, "Recovery failed. Checksum of new ciphertext doesn't match starting at %" PRIu64 ", length %" PRIu64 ".", data_offset + rh->offset, rh->length);
-		else
-			log_dbg(cd, "Checksums based recovery was successfull.");
 
 		r = 0;
 		break;
@@ -1642,48 +1613,12 @@ err:
 	return r;
 }
 
-static int reencrypt_hotzone_protect_init(struct crypt_device *cd,
-	struct luks2_reenc_context *rh,
-	const void *buffer, size_t buffer_len)
-{
-	size_t data_offset;
-	int r;
-
-	switch (rh->rp.type) {
-	case REENC_PROTECTION_NOOP:
-	case REENC_PROTECTION_JOURNAL:
-	case REENC_PROTECTION_DATASHIFT:
-		r = 0;
-		break;
-	case REENC_PROTECTION_CHECKSUM:
-		log_dbg(cd, "Checksums hotzone resilience.");
-
-		for (data_offset = 0, rh->rp.p.csum.last_checksum = rh->rp.p.csum.checksums; data_offset < buffer_len; data_offset += rh->alignment) {
-			if (crypt_hash_write(rh->rp.p.csum.ch, (const char *)buffer + data_offset, rh->alignment)) {
-				log_err(cd, "Failed to hash sector at offset %zu.", data_offset);
-				return -EINVAL;
-			}
-			if (crypt_hash_final(rh->rp.p.csum.ch, rh->rp.p.csum.last_checksum, rh->rp.p.csum.hash_size)) {
-				log_err(cd, "Failed to read sector hash.");
-				return -EINVAL;
-			}
-			rh->rp.p.csum.last_checksum = (char *)rh->rp.p.csum.last_checksum + rh->rp.p.csum.hash_size;
-		}
-		r = 0;
-		break;
-	default:
-		r = -EINVAL;
-	}
-
-	return r;
-}
-
 static int reencrypt_hotzone_protect_final(struct crypt_device *cd,
 	struct luks2_hdr *hdr, struct luks2_reenc_context *rh,
 	const void *buffer, size_t buffer_len)
 {
 	const void *pbuffer;
-	size_t len;
+	size_t data_offset, len;
 	int r;
 
 	if (rh->rp.type == REENC_PROTECTION_NOOP)
@@ -1692,15 +1627,16 @@ static int reencrypt_hotzone_protect_final(struct crypt_device *cd,
 	if (rh->rp.type == REENC_PROTECTION_CHECKSUM) {
 		log_dbg(cd, "Checksums hotzone resilience.");
 
-		if (crypt_hash_write(rh->rp.p.csum.ch, buffer, buffer_len)) {
-			log_err(cd, "Failed to hash new ciphertext.");
-			return -EINVAL;
+		for (data_offset = 0, len = 0; data_offset < buffer_len; data_offset += rh->alignment, len += rh->rp.p.csum.hash_size) {
+			if (crypt_hash_write(rh->rp.p.csum.ch, (const char *)buffer + data_offset, rh->alignment)) {
+				log_err(cd, "Failed to hash sector at offset %zu.", data_offset);
+				return -EINVAL;
+			}
+			if (crypt_hash_final(rh->rp.p.csum.ch, rh->rp.p.csum.checksums + len, rh->rp.p.csum.hash_size)) {
+				log_err(cd, "Failed to read sector hash.");
+				return -EINVAL;
+			}
 		}
-		if (crypt_hash_final(rh->rp.p.csum.ch, rh->rp.p.csum.last_checksum, rh->rp.p.csum.hash_size)) {
-			log_err(cd, "Failed to read sector hash.");
-			return -EINVAL;
-		}
-		len = (char *)rh->rp.p.csum.last_checksum - (char *)rh->rp.p.csum.checksums + rh->rp.p.csum.hash_size;
 		pbuffer = rh->rp.p.csum.checksums;
 	} else if (rh->rp.type == REENC_PROTECTION_JOURNAL) {
 		log_dbg(cd, "Journal hotzone resilience.");
@@ -2152,27 +2088,6 @@ static reenc_status_t _reencrypt_step(struct crypt_device *cd,
 		return REENC_ROLLBACK;
 	}
 
-	r = reencrypt_hotzone_protect_init(cd, rh, rh->reenc_buffer, rh->read);
-	if (r < 0) {
-		/* severity normal */
-		log_err(cd, "Failed initialize hotzone resilience, retval = %d", r);
-		return REENC_ROLLBACK;
-	}
-
-	/* FIXME: wrap in single routine */
-	if (rh->rp.type == REENC_PROTECTION_CHECKSUM) {
-		/* severity normal */
-		r = crypt_storage_wrapper_decrypt(rh->cw1, rh->offset, rh->reenc_buffer, rh->read);
-		if (r) {
-			log_err(cd, "Decryption failed.");
-			return REENC_ROLLBACK;
-		}
-		if (crypt_storage_wrapper_encrypt(rh->cw2, rh->offset, rh->reenc_buffer, rh->read)) {
-			log_err(cd, "Failed to encrypt chunk starting at sector %" PRIu64 ".", rh->offset);
-			return REENC_ROLLBACK;
-		}
-	}
-
 	/* metadata commit point */
 	r = reencrypt_hotzone_protect_final(cd, hdr, rh, rh->reenc_buffer, rh->read);
 	if (r < 0) {
@@ -2181,24 +2096,17 @@ static reenc_status_t _reencrypt_step(struct crypt_device *cd,
 		/* Teardown overlay devices with dm-error. None bio shall pass! */
 		return REENC_ROLLBACK;
 	}
-	if (rh->rp.type != REENC_PROTECTION_CHECKSUM) {
-		r = crypt_storage_wrapper_decrypt(rh->cw1, rh->offset, rh->reenc_buffer, rh->read);
-		if (r) {
-			/* severity normal */
-			log_err(cd, "Decryption failed.");
-			return REENC_ROLLBACK;
-		}
-		if (rh->read != crypt_storage_wrapper_encrypt_write(rh->cw2, rh->offset, rh->reenc_buffer, rh->read)) {
-			/* severity fatal */
-			log_err(cd, "Failed to write chunk starting at sector %" PRIu64 ".", rh->offset);
-			return REENC_FATAL;
-		}
-	} else {
+
+	r = crypt_storage_wrapper_decrypt(rh->cw1, rh->offset, rh->reenc_buffer, rh->read);
+	if (r) {
+		/* severity normal */
+		log_err(cd, "Decryption failed.");
+		return REENC_ROLLBACK;
+	}
+	if (rh->read != crypt_storage_wrapper_encrypt_write(rh->cw2, rh->offset, rh->reenc_buffer, rh->read)) {
 		/* severity fatal */
-		if (rh->read != crypt_storage_wrapper_write(rh->cw2, rh->offset, rh->reenc_buffer, rh->read)) {
-			log_err(cd, "Failed to write chunk starting at sector %" PRIu64 ".", rh->offset);
-			return REENC_FATAL;
-		}
+		log_err(cd, "Failed to write chunk starting at sector %" PRIu64 ".", rh->offset);
+		return REENC_FATAL;
 	}
 
 	if (rh->rp.type != REENC_PROTECTION_NOOP)
