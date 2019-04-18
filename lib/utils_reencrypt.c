@@ -97,7 +97,7 @@ static size_t _reenc_alignment(struct crypt_device *cd,
 static void _load_backup_segments(struct luks2_hdr *hdr,
 		struct luks2_reenc_context *rh)
 {
-	int segment = LUKS2_get_segment_id_by_flag(hdr, "reencrypt-final");
+	int segment = LUKS2_get_segment_id_by_flag(hdr, "backup-final");
 
 	if (segment >= 0) {
 		rh->jobj_segment_new = json_object_get(LUKS2_get_segment_jobj(hdr, segment));
@@ -107,7 +107,7 @@ static void _load_backup_segments(struct luks2_hdr *hdr,
 		rh->digest_new = -ENOENT;
 	}
 
-	segment = LUKS2_get_segment_id_by_flag(hdr, "reencrypt-previous");
+	segment = LUKS2_get_segment_id_by_flag(hdr, "backup-previous");
 	if (segment >= 0) {
 		rh->jobj_segment_old = json_object_get(LUKS2_get_segment_jobj(hdr, segment));
 		rh->digest_old = LUKS2_digest_by_segment(hdr, segment);
@@ -116,7 +116,7 @@ static void _load_backup_segments(struct luks2_hdr *hdr,
 		rh->digest_old = -ENOENT;
 	}
 
-	segment = LUKS2_get_segment_id_by_flag(hdr, "reencrypt-moved-segment");
+	segment = LUKS2_get_segment_id_by_flag(hdr, "backup-moved-segment");
 	if (segment >= 0)
 		rh->jobj_segment_moved = json_object_get(LUKS2_get_segment_jobj(hdr, segment));
 	else
@@ -211,10 +211,10 @@ static int _reenc_load(struct crypt_device *cd, struct luks2_hdr *hdr, struct lu
 	else
 		rh->progress = rh->offset;
 
-	log_dbg(cd, "reencrypt-previous digest id: %d", rh->digest_old);
-	log_dbg(cd, "reencrypt-previous segment: %s", rh->jobj_segment_old ? json_object_to_json_string_ext(rh->jobj_segment_old, JSON_C_TO_STRING_PRETTY) : "<missing>");
-	log_dbg(cd, "reencrypt-final digest id: %d", rh->digest_new);
-	log_dbg(cd, "reencrypt-final segment: %s", rh->jobj_segment_new ? json_object_to_json_string_ext(rh->jobj_segment_new, JSON_C_TO_STRING_PRETTY) : "<missing>");
+	log_dbg(cd, "backup-previous digest id: %d", rh->digest_old);
+	log_dbg(cd, "backup-previous segment: %s", rh->jobj_segment_old ? json_object_to_json_string_ext(rh->jobj_segment_old, JSON_C_TO_STRING_PRETTY) : "<missing>");
+	log_dbg(cd, "backup-final digest id: %d", rh->digest_new);
+	log_dbg(cd, "backup-final segment: %s", rh->jobj_segment_new ? json_object_to_json_string_ext(rh->jobj_segment_new, JSON_C_TO_STRING_PRETTY) : "<missing>");
 
 	log_dbg(cd, "reencrypt length: %" PRIu64, rh->length);
 	log_dbg(cd, "reencrypt offset: %" PRIu64, rh->offset);
@@ -1387,7 +1387,7 @@ static int _create_backup_segments(struct crypt_device *cd,
 
 	if (!strcmp(params->mode, "encrypt") && segment > 1) {
 		json_object_copy(LUKS2_get_segment_jobj(hdr, 0), &jobj_segment_bcp);
-		r = LUKS2_segment_set_flag(jobj_segment_bcp, "reencrypt-moved-segment");
+		r = LUKS2_segment_set_flag(jobj_segment_bcp, "backup-moved-segment");
 		if (r)
 			goto err;
 		moved_segment = segment++;
@@ -1409,7 +1409,7 @@ static int _create_backup_segments(struct crypt_device *cd,
 		goto err;
 	}
 
-	r = LUKS2_segment_set_flag(jobj_segment_old, "reencrypt-previous");
+	r = LUKS2_segment_set_flag(jobj_segment_old, "backup-previous");
 	if (r)
 		goto err;
 	json_object_object_add_by_uint(LUKS2_get_segments_jobj(hdr), segment, jobj_segment_old);
@@ -1441,7 +1441,7 @@ static int _create_backup_segments(struct crypt_device *cd,
 		goto err;
 	}
 
-	r = LUKS2_segment_set_flag(jobj_segment_new, "reencrypt-final");
+	r = LUKS2_segment_set_flag(jobj_segment_new, "backup-final");
 	if (r)
 		goto err;
 	json_object_object_add_by_uint(LUKS2_get_segments_jobj(hdr), segment, jobj_segment_new);
@@ -2274,19 +2274,19 @@ int crypt_reencrypt(struct crypt_device *cd,
 int reenc_erase_backup_segments(struct crypt_device *cd,
 		struct luks2_hdr *hdr)
 {
-	int segment = LUKS2_get_segment_id_by_flag(hdr, "reencrypt-previous");
+	int segment = LUKS2_get_segment_id_by_flag(hdr, "backup-previous");
 	if (segment >= 0) {
 		if (LUKS2_digest_segment_assign(cd, hdr, segment, CRYPT_ANY_DIGEST, 0, 0))
 			return -EINVAL;
 		json_object_object_del_by_uint(LUKS2_get_segments_jobj(hdr), segment);
 	}
-	segment = LUKS2_get_segment_id_by_flag(hdr, "reencrypt-final");
+	segment = LUKS2_get_segment_id_by_flag(hdr, "backup-final");
 	if (segment >= 0) {
 		if (LUKS2_digest_segment_assign(cd, hdr, segment, CRYPT_ANY_DIGEST, 0, 0))
 			return -EINVAL;
 		json_object_object_del_by_uint(LUKS2_get_segments_jobj(hdr), segment);
 	}
-	segment = LUKS2_get_segment_id_by_flag(hdr, "reencrypt-moved-segment");
+	segment = LUKS2_get_segment_id_by_flag(hdr, "backup-moved-segment");
 	if (segment >= 0) {
 		if (LUKS2_digest_segment_assign(cd, hdr, segment, CRYPT_ANY_DIGEST, 0, 0))
 			return -EINVAL;

@@ -154,7 +154,7 @@ static bool json_segment_contains_flag(json_object *jobj_segment, const char *pr
 
 bool json_segment_is_backup(json_object *jobj_segment)
 {
-	return json_segment_contains_flag(jobj_segment, "reencrypt-", 10);
+	return json_segment_contains_flag(jobj_segment, "backup-", 7);
 }
 
 bool json_segment_is_reencrypt(json_object *jobj_segment)

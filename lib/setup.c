@@ -3715,7 +3715,7 @@ int luks2_check_device_size(struct crypt_device *cd, struct luks2_hdr *hdr, uint
 	 * layout looks like:
 	 * [LUKS2 hdr (data offset)][segment s with fixed size] [spare space for shift] [moved segment]
 	 */
-	if (LUKS2_get_segment_id_by_flag(hdr, "reencrypt-moved-segment") >= 0)
+	if (LUKS2_get_segment_id_by_flag(hdr, "backup-moved-segment") >= 0)
 		check_size += data_shift;
 
 	check_size >>= SECTOR_SHIFT;

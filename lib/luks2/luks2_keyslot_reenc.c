@@ -241,12 +241,12 @@ const keyslot_handler reenc_keyslot = {
 
 static int reencrypt_segment_id(struct luks2_hdr *hdr, bool new)
 {
-	return LUKS2_get_segment_id_by_flag(hdr, new ? "reencrypt-final" : "reencrypt-previous");
+	return LUKS2_get_segment_id_by_flag(hdr, new ? "backup-final" : "backup-previous");
 }
 
 static json_object *reencrypt_segment(struct luks2_hdr *hdr, unsigned new)
 {
-	return LUKS2_get_segment_by_flag(hdr, new ? "reencrypt-final" : "reencrypt-previous");
+	return LUKS2_get_segment_by_flag(hdr, new ? "backup-final" : "backup-previous");
 }
 
 json_object *LUKS2_reencrypt_segment_new(struct luks2_hdr *hdr)
@@ -300,7 +300,7 @@ static uint64_t _reencrypt_data_offset(struct luks2_hdr *hdr, unsigned new)
 
 uint64_t LUKS2_reencrypt_get_data_offset_moved(struct luks2_hdr *hdr)
 {
-	json_object *jobj_segment = LUKS2_get_segment_by_flag(hdr, "reencrypt-moved-segment");
+	json_object *jobj_segment = LUKS2_get_segment_by_flag(hdr, "backup-moved-segment");
 
 	if (!jobj_segment)
 		return 0;
@@ -320,7 +320,7 @@ uint64_t LUKS2_reencrypt_get_data_offset_old(struct luks2_hdr *hdr)
 
 static int _reencrypt_digest(struct luks2_hdr *hdr, unsigned new)
 {
-	int segment = LUKS2_get_segment_id_by_flag(hdr, new ? "reencrypt-final" : "reencrypt-previous");
+	int segment = LUKS2_get_segment_id_by_flag(hdr, new ? "backup-final" : "backup-previous");
 
 	if (segment < 0)
 		return segment;
