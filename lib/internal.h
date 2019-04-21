@@ -40,7 +40,6 @@
 #include "utils_keyring.h"
 #include "utils_io.h"
 #include "crypto_backend.h"
-#include "utils_reencrypt.h"
 #include "utils_storage_wrappers.h"
 
 #include "libcryptsetup.h"
@@ -213,8 +212,6 @@ int PLAIN_activate(struct crypt_device *cd,
 void *crypt_get_hdr(struct crypt_device *cd, const char *type);
 void crypt_set_reenc_context(struct crypt_device *cd, struct luks2_reenc_context *rh);
 struct luks2_reenc_context *crypt_get_reenc_context(struct crypt_device *cd);
-
-int luks2_check_device_size(struct crypt_device *cd, struct luks2_hdr *hdr, uint64_t *device_size, bool activation);
 
 int onlyLUKS2(struct crypt_device *cd);
 int onlyLUKS2mask(struct crypt_device *cd, uint32_t mask);

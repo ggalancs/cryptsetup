@@ -25,6 +25,7 @@
 #include <stdbool.h>
 
 #include "libcryptsetup.h"
+#include "utils_reencrypt.h"
 
 #define LUKS2_MAGIC_1ST "LUKS\xba\xbe"
 #define LUKS2_MAGIC_2ND "SKUL\xba\xbe"

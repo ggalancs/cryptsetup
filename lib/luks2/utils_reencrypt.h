@@ -23,12 +23,15 @@
 #define _UTILS_REENCRYPT_H
 
 #include <unistd.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 struct crypt_device;
 struct luks2_hdr;
 struct luks2_reenc_context;
 struct crypt_lock_handle;
 struct crypt_params_reencrypt;
+struct volume_key;
 
 int LUKS2_verify_and_upload_keys(struct crypt_device *cd,
 	struct luks2_hdr *hdr,
@@ -57,4 +60,7 @@ int reenc_erase_backup_segments(struct crypt_device *cd, struct luks2_hdr *hdr);
 
 int crypt_reencrypt_lock(struct crypt_device *cd, struct crypt_lock_handle **reencrypt_lock);
 void crypt_reencrypt_unlock(struct crypt_device *cd, struct crypt_lock_handle *reencrypt_lock);
+
+int luks2_check_device_size(struct crypt_device *cd, struct luks2_hdr *hdr, uint64_t *device_size, bool activation);
+
 #endif /* _UTILS_REENCRYPT_H */
