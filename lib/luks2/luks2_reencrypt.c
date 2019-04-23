@@ -914,7 +914,7 @@ static int _reenc_load(struct crypt_device *cd, struct luks2_hdr *hdr, struct lu
 
 	rh->length = LUKS2_get_reencrypt_length(hdr, rh, area_length, params->max_hotzone_size);
 	if (LUKS2_get_reencrypt_offset(hdr, rh->direction, device_size, &rh->length, &rh->offset)) {
-		log_err(cd, "Failed to get reencryption offset.");
+		log_err(cd, _("Failed to get reencryption offset."));
 		return -EINVAL;
 	}
 
@@ -1013,7 +1013,7 @@ static int _load_segments(struct crypt_device *cd, struct luks2_hdr *hdr, struct
 
 	r = LUKS2_reenc_create_segments(cd, hdr, rh, device_size);
 	if (r) {
-		log_err(cd, "Failed to create reencryption segments.");
+		log_err(cd, _("Failed to create reencryption segments."));
 		return r;
 	}
 
@@ -1197,7 +1197,7 @@ int LUKS2_reenc_recover(struct crypt_device *cd,
 			data_offset + rh->offset, crash_iv_offset, new_sector_size,
 			LUKS2_reencrypt_segment_cipher_new(hdr), vk_new, 0);
 	if (r) {
-		log_err(cd, "Failed to initialize new key storage wrapper.");
+		log_err(cd, _("Failed to initialize new key storage wrapper."));
 		return r;
 	}
 
@@ -1219,7 +1219,7 @@ int LUKS2_reenc_recover(struct crypt_device *cd,
 				data_offset + rh->offset, crash_iv_offset, old_sector_size,
 				LUKS2_reencrypt_segment_cipher_old(hdr), vk_old, 0);
 		if (r) {
-			log_err(cd, "Failed to initialize old segment storage wrapper.");
+			log_err(cd, _("Failed to initialize old segment storage wrapper."));
 			goto out;
 		}
 
@@ -1240,7 +1240,7 @@ int LUKS2_reenc_recover(struct crypt_device *cd,
 		/* TODO: lock for read */
 		fd = device_open(cd, crypt_metadata_device(cd), O_RDONLY);
 		if (fd < 0) {
-			log_err(cd, "Failed to open mdata device.");
+			log_err(cd, _("Failed to open mdata device."));
 			goto out;
 		}
 
@@ -1249,39 +1249,39 @@ int LUKS2_reenc_recover(struct crypt_device *cd,
 					device_alignment(crypt_metadata_device(cd)), rh->rp.p.csum.checksums, area_length_read, area_offset);
 		close(fd);
 		if (read < 0 || (size_t)read != area_length_read) {
-			log_err(cd, "Failed to read checksums.");
+			log_err(cd, _("Failed to read checksums."));
 			r = -EINVAL;
 			goto out;
 		}
 
 		read = crypt_storage_wrapper_read(cw2, 0, data_buffer, rh->length);
 		if (read < 0 || (size_t)read != rh->length) {
-			log_err(cd, "Failed to read hotzone area.");
+			log_err(cd, _("Failed to read hotzone area."));
 			r = -EINVAL;
 			goto out;
 		}
 
 		for (s = 0; s < count; s++) {
 			if (crypt_hash_write(rh->rp.p.csum.ch, data_buffer + (s * rh->alignment), rh->alignment)) {
-				log_err(cd, "Failed to write hash.");
+				log_err(cd, _("Failed to write hash."));
 				r = EINVAL;
 				goto out;
 			}
 			if (crypt_hash_final(rh->rp.p.csum.ch, checksum_tmp, rh->rp.p.csum.hash_size)) {
-				log_err(cd, "Failed to finalize hash.");
+				log_err(cd, _("Failed to finalize hash."));
 				r = EINVAL;
 				goto out;
 			}
 			if (!memcmp(checksum_tmp, (char *)rh->rp.p.csum.checksums + (s * rh->rp.p.csum.hash_size), rh->rp.p.csum.hash_size)) {
 				log_dbg(cd, "Sector %zu (size %zu, offset %zu) needs recovery", s, rh->alignment, s * rh->alignment);
 				if (crypt_storage_wrapper_decrypt(cw1, s * rh->alignment, data_buffer + (s * rh->alignment), rh->alignment)) {
-					log_err(cd, "Failed to decrypt sector %zu.", s);
+					log_err(cd, _("Failed to decrypt sector %zu."), s);
 					r = -EINVAL;
 					goto out;
 				}
 				w = crypt_storage_wrapper_encrypt_write(cw2, s * rh->alignment, data_buffer + (s * rh->alignment), rh->alignment);
 				if (w < 0 || (size_t)w != rh->alignment) {
-					log_err(cd, "Failed to recover sector %zu.", s);
+					log_err(cd, _("Failed to recover sector %zu."), s);
 					r = -EINVAL;
 					goto out;
 				}
@@ -1296,7 +1296,7 @@ int LUKS2_reenc_recover(struct crypt_device *cd,
 		/* FIXME: validation candidate */
 		if (rh->length > area_length) {
 			r = -EINVAL;
-			log_err(cd, "Invalid resilience parameters (internal error).");
+			log_err(cd, _("Invalid resilience parameters (internal error)."));
 			goto out;
 		}
 
@@ -1305,7 +1305,7 @@ int LUKS2_reenc_recover(struct crypt_device *cd,
 				area_offset, crash_iv_offset, old_sector_size,
 				LUKS2_reencrypt_segment_cipher_old(hdr), vk_old, 0);
 		if (r) {
-			log_err(cd, "Failed to initialize old key storage wrapper.");
+			log_err(cd, _("Failed to initialize old key storage wrapper."));
 			goto out;
 		}
 		read = crypt_storage_wrapper_read_decrypt(cw1, 0, data_buffer, rh->length);
@@ -1339,7 +1339,7 @@ int LUKS2_reenc_recover(struct crypt_device *cd,
 					data_offset + rh->offset - rh->data_shift, 0, 0,
 					LUKS2_reencrypt_segment_cipher_old(hdr), NULL, 0);
 		if (r) {
-			log_err(cd, "Failed to initialize old key storage wrapper.");
+			log_err(cd, _("Failed to initialize old key storage wrapper."));
 			goto out;
 		}
 
@@ -1444,7 +1444,7 @@ static int _assign_segments_simple(struct crypt_device *cd,
 	}
 
 	if (r) {
-		log_err(cd, "Failed to assign new enc segments.");
+		log_err(cd, _("Failed to assign new enc segments."));
 		return r;
 	}
 
@@ -1469,7 +1469,7 @@ static int _assign_segments_simple(struct crypt_device *cd,
 	for (sg = 0; sg < LUKS2_segments_count(hdr); sg++) {
 		if (LUKS2_segment_is_type(hdr, sg, "crypt") &&
 		    LUKS2_digest_segment_assign(cd, hdr, sg, rh->type == ENCRYPT ? rh->digest_new : rh->digest_old, 1, 0)) {
-			log_err(cd, "Failed to assign digest %u to segment %u.", rh->digest_new, sg);
+			log_err(cd, _("Failed to assign digest %u to segment %u."), rh->digest_new, sg);
 			return -EINVAL;
 		}
 	}
@@ -1529,18 +1529,18 @@ static int reenc_assign_segments(struct crypt_device *cd, struct luks2_hdr *hdr,
 	}
 
 	if (r) {
-		log_err(cd, "Failed to set segments.");
+		log_err(cd, _("Failed to set segments."));
 		return r;
 	}
 
 	r = _add_backup_segment(cd, hdr, rh, 0);
 	if (r) {
-		log_err(cd, "Failed to assign reencrypt previous backup segment.");
+		log_err(cd, _("Failed to assign reencrypt previous backup segment."));
 		return r;
 	}
 	r = _add_backup_segment(cd, hdr, rh, 1);
 	if (r) {
-		log_err(cd, "Failed to assign reencrypt final backup segment.");
+		log_err(cd, _("Failed to assign reencrypt final backup segment."));
 		return r;
 	}
 
@@ -1593,14 +1593,14 @@ static int _encrypt_set_segments(struct crypt_device *cd, struct luks2_hdr *hdr,
 		jobj_segment_first =  json_segment_create_linear(first_segment_offset, &first_segment_length, 0);
 		jobj_segment_second = json_segment_create_linear(second_segment_offset, &second_segment_length, 0);
 		if (!jobj_segment_second) {
-			log_err(cd, "Failed generate 2nd segment.");
+			log_err(cd, _("Failed generate 2nd segment."));
 			goto err;
 		}
 	} else
 		jobj_segment_first =  json_segment_create_linear(first_segment_offset, first_segment_length ? &first_segment_length : NULL, 0);
 
 	if (!jobj_segment_first) {
-		log_err(cd, "Failed generate 1st segment.");
+		log_err(cd, _("Failed generate 1st segment."));
 		goto err;
 	}
 
@@ -1653,7 +1653,7 @@ static int reenc_setup_segments(struct crypt_device *cd,
 		if (!strcmp(json_segment_type(jobj), "crypt")) {
 			vk = crypt_volume_key_by_id(vks, reenc_seg ? LUKS2_reencrypt_digest_new(hdr) : LUKS2_digest_by_segment(hdr, s));
 			if (!vk) {
-				log_err(cd, "Missing key for dm-crypt segment %d", s);
+				log_err(cd, _("Missing key for dm-crypt segment %d"), s);
 				r = -EINVAL;
 				goto out;
 			}
@@ -1722,19 +1722,19 @@ static int reenc_load_overlay_device(struct crypt_device *cd, struct luks2_hdr *
 
 	r = device_alloc(cd, &hz_dev, hz_path);
 	if (r) {
-		log_err(cd, "Failed to alocate device %s.", hz_path);
+		log_err(cd, _("Failed to alocate device %s."), hz_path);
 		goto out;
 	}
 
 	r = dm_targets_allocate(&dmd.segment, LUKS2_segments_count(hdr));
 	if (r) {
-		log_err(cd, "Failed to allocate dm segments.");
+		log_err(cd, _("Failed to allocate dm segments."));
 		goto out;
 	}
 
 	r = reenc_setup_segments(cd, hdr, hz_dev, vks, &dmd.segment, size);
 	if (r < 0) {
-		log_err(cd, "Failed to create dm segments.");
+		log_err(cd, _("Failed to create dm segments."));
 		goto out;
 	}
 
@@ -1788,7 +1788,7 @@ static int reenc_replace_device(struct crypt_device *cd, const char *target, con
 		goto err;
 
 	if (exists && size != dmd_source.size) {
-		log_err(cd, "Source and target device sizes don't match. Source %" PRIu64 ", target: %" PRIu64 ".",
+		log_err(cd, _("Source and target device sizes don't match. Source %" PRIu64 ", target: %" PRIu64 "."),
 			dmd_source.size, size);
 		r = -EINVAL;
 		goto err;
@@ -1830,7 +1830,7 @@ static int reenc_swap_backing_device(struct crypt_device *cd, const char *name,
 
 	r = device_alloc(cd, &overlay_dev, overlay_path);
 	if (r) {
-		log_err(cd, "Failed to allocate device for new backing device.");
+		log_err(cd, _("Failed to allocate device for new backing device."));
 		goto out;
 	}
 
@@ -1894,7 +1894,7 @@ static int reenc_init_helper_devices(struct crypt_device *cd,
 	/* Activate hotzone device 1:1 linear mapping to data_device */
 	r = reenc_activate_hotzone_device(cd, hotzone, CRYPT_ACTIVATE_PRIVATE);
 	if (r) {
-		log_err(cd, "Failed to activate hotzone device %s.", hotzone);
+		log_err(cd, _("Failed to activate hotzone device %s."), hotzone);
 		return r;
 	}
 
@@ -1911,14 +1911,14 @@ static int reenc_init_helper_devices(struct crypt_device *cd,
 	 */
 	r = reenc_replace_device(cd, overlay, name, CRYPT_ACTIVATE_PRIVATE);
 	if (r) {
-		log_err(cd, "Failed to activate overlay device %s with actual origin table.", overlay);
+		log_err(cd, _("Failed to activate overlay device %s with actual origin table."), overlay);
 		goto err;
 	}
 
 	/* swap origin mapping to overlay device */
 	r = reenc_swap_backing_device(cd, name, overlay, CRYPT_ACTIVATE_KEYRING_KEY);
 	if (r) {
-		log_err(cd, "Failed to load new maping for device %s.", name);
+		log_err(cd, _("Failed to load new maping for device %s."), name);
 		goto err;
 	}
 
@@ -1954,7 +1954,7 @@ static int reenc_refresh_helper_devices(struct crypt_device *cd, const char *ove
 	 */
 	r = dm_suspend_device(cd, overlay, DM_SUSPEND_SKIP_LOCKFS | DM_SUSPEND_NOFLUSH);
 	if (r) {
-		log_err(cd, "Failed to suspend %s.", overlay);
+		log_err(cd, _("Failed to suspend %s."), overlay);
 		return r;
 	}
 
@@ -1963,7 +1963,7 @@ static int reenc_refresh_helper_devices(struct crypt_device *cd, const char *ove
 	/* suspend HZ device */
 	r = dm_suspend_device(cd, hotzone, DM_SUSPEND_SKIP_LOCKFS | DM_SUSPEND_NOFLUSH);
 	if (r) {
-		log_err(cd, "Failed to suspend %s.", hotzone);
+		log_err(cd, _("Failed to suspend %s."), hotzone);
 		return r;
 	}
 
@@ -1972,7 +1972,7 @@ static int reenc_refresh_helper_devices(struct crypt_device *cd, const char *ove
 	/* resume overlay device: inactive table (with hotozne) -> live */
 	r = dm_resume_device(cd, overlay, DM_RESUME_PRIVATE);
 	if (r)
-		log_err(cd, "Failed to resume device %s.", overlay);
+		log_err(cd, _("Failed to resume device %s."), overlay);
 	else
 		log_dbg(cd, "Resume device %s.", overlay);
 
@@ -1988,13 +1988,13 @@ static int reenc_refresh_overlay_devices(struct crypt_device *cd,
 {
 	int r = reenc_load_overlay_device(cd, hdr, overlay, hotzone, vks, device_size);
 	if (r) {
-		log_err(cd, "Failed to reload overlay device %s.", overlay);
+		log_err(cd, _("Failed to reload overlay device %s."), overlay);
 		return REENC_ERR;
 	}
 
 	r = reenc_refresh_helper_devices(cd, overlay, hotzone);
 	if (r) {
-		log_err(cd, "Failed to refresh helper devices.");
+		log_err(cd, _("Failed to refresh helper devices."));
 		return REENC_ROLLBACK;
 	}
 
@@ -2173,7 +2173,7 @@ static int _create_backup_segments(struct crypt_device *cd,
 	/* FIXME: also check occupied space by keyslot in shrunk area */
 	if (data_shift && (crypt_metadata_device(cd) == crypt_data_device(cd))
 	    && LUKS2_set_keyslots_size(cd, hdr, json_segment_get_offset(jobj_segment_new, 0))) {
-		log_err(cd, "Failed to set new keyslots size.");
+		log_err(cd, _("Failed to set new keyslots size."));
 		r = -EINVAL;
 		goto err;
 	}
@@ -2249,7 +2249,7 @@ static int _reencrypt_init(struct crypt_device *cd,
 		snprintf(_cipher, sizeof(_cipher), "%s-%s", cipher, cipher_mode);
 
 	if (MISALIGNED(params->data_shift, sector_size >> SECTOR_SHIFT)) {
-		log_err(cd, "Data shift is not aligned to requested encryption sector size (%" PRIu32 " bytes).", sector_size);
+		log_err(cd, _("Data shift is not aligned to requested encryption sector size (%" PRIu32 " bytes)."), sector_size);
 		return -EINVAL;
 	}
 
@@ -2261,7 +2261,7 @@ static int _reencrypt_init(struct crypt_device *cd,
 		return r;
 
 	if (MISALIGNED(dev_size, sector_size >> SECTOR_SHIFT)) {
-		log_err(cd, "Data device is not aligned to requested encryption sector size (%" PRIu32 " bytes).", sector_size);
+		log_err(cd, _("Data device is not aligned to requested encryption sector size (%" PRIu32 " bytes)."), sector_size);
 		return -EINVAL;
 	}
 
@@ -2279,12 +2279,12 @@ static int _reencrypt_init(struct crypt_device *cd,
 	if (move_first_segment) {
 		/* TODO: api test */
 		if (params->data_shift < LUKS2_get_data_offset(hdr)) {
-			log_err(cd, "Data shift (%" PRIu64 " sectors) is less than future data offset (%" PRIu64 " sectors).", params->data_shift, LUKS2_get_data_offset(hdr));
+			log_err(cd, _("Data shift (%" PRIu64 " sectors) is less than future data offset (%" PRIu64 " sectors)."), params->data_shift, LUKS2_get_data_offset(hdr));
 			return -EINVAL;
 		}
 		devfd = device_open_excl(cd, crypt_data_device(cd), O_RDWR);
 		if (devfd < 0) {
-			log_err(cd, "Failed to open %s in exclusive mode (perhaps already mapped or mounted).",
+			log_err(cd, _("Failed to open %s in exclusive mode (perhaps already mapped or mounted)."),
 				device_path(crypt_data_device(cd)));
 			return -EINVAL;
 		}
@@ -2320,7 +2320,7 @@ static int _reencrypt_init(struct crypt_device *cd,
 	/* This must be first and only metadata write in LUKS2 in _reencrypt_init */
 	r = update_reencryption_flag(cd, 1, true);
 	if (r) {
-		log_err(cd, "Failed to set online-reencryption requirement.");
+		log_err(cd, _("Failed to set online-reencryption requirement."));
 		r = -EINVAL;
 	} else
 		r = reencrypt_keyslot;
@@ -2350,11 +2350,11 @@ static int reencrypt_hotzone_protect_final(struct crypt_device *cd,
 
 		for (data_offset = 0, len = 0; data_offset < buffer_len; data_offset += rh->alignment, len += rh->rp.p.csum.hash_size) {
 			if (crypt_hash_write(rh->rp.p.csum.ch, (const char *)buffer + data_offset, rh->alignment)) {
-				log_err(cd, "Failed to hash sector at offset %zu.", data_offset);
+				log_err(cd, _("Failed to hash sector at offset %zu."), data_offset);
 				return -EINVAL;
 			}
 			if (crypt_hash_final(rh->rp.p.csum.ch, rh->rp.p.csum.checksums + len, rh->rp.p.csum.hash_size)) {
-				log_err(cd, "Failed to read sector hash.");
+				log_err(cd, _("Failed to read sector hash."));
 				return -EINVAL;
 			}
 		}
@@ -2412,7 +2412,7 @@ static int _update_reencrypt_context(struct crypt_device *cd,
 		return -EINVAL;
 
 	if (rh->device_size < rh->offset) {
-		log_err(cd, "Error: Calculated reencryption offset %" PRIu64 " is beyond device size %" PRIu64 ".", rh->offset, rh->device_size);
+		log_err(cd, _("Error: Calculated reencryption offset %" PRIu64 " is beyond device size %" PRIu64 "."), rh->offset, rh->device_size);
 		return -EINVAL;
 	}
 
@@ -2478,7 +2478,7 @@ int LUKS2_reenc_load(struct crypt_device *cd, struct luks2_hdr *hdr,
 		r = -EINVAL;
 
 	if (r < 0 || !tmp) {
-		log_err(cd, "Failed to load reenc context.");
+		log_err(cd, _("Failed to load reenc context."));
 		return r;
 	}
 
@@ -2523,20 +2523,20 @@ static int reencrypt_lock_and_verify(struct crypt_device *cd, struct luks2_hdr *
 
 	ri = LUKS2_reenc_status(hdr);
 	if (ri == CRYPT_REENCRYPT_INVALID) {
-		log_err(cd, "Failed to read reencryption state.");
+		log_err(cd, _("Failed to read reencryption state."));
 		return -EINVAL;
 	}
 	if (ri < CRYPT_REENCRYPT_CLEAN) {
-		log_err(cd, "Device is not in reencryption.");
+		log_err(cd, _("Device is not in reencryption."));
 		return -EINVAL;
 	}
 
 	r = crypt_reencrypt_lock(cd, &h);
 	if (r < 0) {
 		if (r == -EBUSY)
-			log_err(cd, "Reencryption process is already running.");
+			log_err(cd, _("Reencryption process is already running."));
 		else
-			log_err(cd, "Failed to acquire reencryption lock.");
+			log_err(cd, _("Failed to acquire reencryption lock."));
 		return r;
 	}
 
@@ -2554,7 +2554,7 @@ static int reencrypt_lock_and_verify(struct crypt_device *cd, struct luks2_hdr *
 	}
 
 	crypt_reencrypt_unlock(cd, h);
-	log_err(cd, "Device is not in clean reencryption state.");
+	log_err(cd, _("Device is not in clean reencryption state."));
 	return -EINVAL;
 }
 
@@ -2598,7 +2598,7 @@ static int _reencrypt_load(struct crypt_device *cd,
 
 	r = LUKS2_reenc_load(cd, hdr, device_size, params, &rh);
 	if (r < 0 || !rh) {
-		log_err(cd, "Failed to load reenc context.");
+		log_err(cd, _("Failed to load reenc context."));
 		goto err;
 	}
 
@@ -2761,7 +2761,7 @@ static reenc_status_t _reencrypt_step(struct crypt_device *cd,
 	/* in memory only */
 	r = _load_segments(cd, hdr, rh, device_size);
 	if (r) {
-		log_err(cd, "Failed to calculate new segments.");
+		log_err(cd, _("Failed to calculate new segments."));
 		return REENC_ERR;
 	}
 
@@ -2769,7 +2769,7 @@ static reenc_status_t _reencrypt_step(struct crypt_device *cd,
 
 	r = reenc_assign_segments(cd, hdr, rh, 1, 0);
 	if (r) {
-		log_err(cd, "Failed to assign pre reenc segments.");
+		log_err(cd, _("Failed to assign pre reenc segments."));
 		return REENC_ERR;
 	}
 
@@ -2796,7 +2796,7 @@ static reenc_status_t _reencrypt_step(struct crypt_device *cd,
 				crypt_volume_key_by_id(rh->vks, rh->digest_old),
 				rh->wflags1);
 		if (r) {
-			log_err(cd, "Failed to reinitialize storage wrapper.");
+			log_err(cd, _("Failed to reinitialize storage wrapper."));
 			return REENC_ROLLBACK;
 		}
 		log_dbg(cd, "This will be encryption last step.");
@@ -2805,7 +2805,7 @@ static reenc_status_t _reencrypt_step(struct crypt_device *cd,
 	rh->read = crypt_storage_wrapper_read(rh->cw1, rh->offset, rh->reenc_buffer, rh->length);
 	if (rh->read < 0) {
 		/* severity normal */
-		log_err(cd, "Failed to read chunk starting at %" PRIu64 ".", rh->offset);
+		log_err(cd, _("Failed to read chunk starting at %" PRIu64 "."), rh->offset);
 		return REENC_ROLLBACK;
 	}
 
@@ -2813,7 +2813,7 @@ static reenc_status_t _reencrypt_step(struct crypt_device *cd,
 	r = reencrypt_hotzone_protect_final(cd, hdr, rh, rh->reenc_buffer, rh->read);
 	if (r < 0) {
 		/* severity normal */
-		log_err(cd, "Failed finalize hotzone resilience, retval = %d", r);
+		log_err(cd, _("Failed finalize hotzone resilience, retval = %d"), r);
 		/* Teardown overlay devices with dm-error. None bio shall pass! */
 		return REENC_ROLLBACK;
 	}
@@ -2821,12 +2821,12 @@ static reenc_status_t _reencrypt_step(struct crypt_device *cd,
 	r = crypt_storage_wrapper_decrypt(rh->cw1, rh->offset, rh->reenc_buffer, rh->read);
 	if (r) {
 		/* severity normal */
-		log_err(cd, "Decryption failed.");
+		log_err(cd, _("Decryption failed."));
 		return REENC_ROLLBACK;
 	}
 	if (rh->read != crypt_storage_wrapper_encrypt_write(rh->cw2, rh->offset, rh->reenc_buffer, rh->read)) {
 		/* severity fatal */
-		log_err(cd, "Failed to write chunk starting at sector %" PRIu64 ".", rh->offset);
+		log_err(cd, _("Failed to write chunk starting at sector %" PRIu64 "."), rh->offset);
 		return REENC_FATAL;
 	}
 
@@ -2837,7 +2837,7 @@ static reenc_status_t _reencrypt_step(struct crypt_device *cd,
 	r = reenc_assign_segments(cd, hdr, rh, 0, rh->rp.type != REENC_PROTECTION_NOOP);
 	if (r) {
 		/* severity fatal */
-		log_err(cd, "Failed to assign reenc segments.");
+		log_err(cd, _("Failed to assign reenc segments."));
 		return REENC_FATAL;
 	}
 
@@ -2846,7 +2846,7 @@ static reenc_status_t _reencrypt_step(struct crypt_device *cd,
 		log_dbg(cd, "Resuming device %s", rh->hotzone_name);
 		r = dm_resume_device(cd, rh->hotzone_name, DM_RESUME_PRIVATE);
 		if (r) {
-			log_err(cd, "Failed to resume device %s.", rh->hotzone_name);
+			log_err(cd, _("Failed to resume device %s."), rh->hotzone_name);
 			return REENC_ERR;
 		}
 	}
@@ -2861,18 +2861,18 @@ static int _reencrypt_teardown_ok(struct crypt_device *cd, struct luks2_hdr *hdr
 
 	if (rh->rp.type == REENC_PROTECTION_NOOP &&
 	    LUKS2_hdr_write(cd, hdr)) {
-		log_err(cd, "Failed to write LUKS2 metadata.");
+		log_err(cd, _("Failed to write LUKS2 metadata."));
 		return -EINVAL;
 	}
 
 	if (rh->online) {
 		r = LUKS2_reload(cd, rh->device_name, rh->vks, CRYPT_ACTIVATE_KEYRING_KEY | CRYPT_ACTIVATE_SHARED);
 		if (r)
-			log_err(cd, "Failed to reload %s device.", rh->device_name);
+			log_err(cd, _("Failed to reload %s device."), rh->device_name);
 		if (!r) {
 			r = dm_resume_device(cd, rh->device_name, 0);
 			if (r)
-				log_err(cd, "Failed to resume %s device.", rh->device_name);
+				log_err(cd, _("Failed to resume %s device."), rh->device_name);
 		}
 		dm_remove_device(cd, rh->overlay_name, 0);
 		dm_remove_device(cd, rh->hotzone_name, 0);
@@ -2880,18 +2880,18 @@ static int _reencrypt_teardown_ok(struct crypt_device *cd, struct luks2_hdr *hdr
 
 	if (finished) {
 		if (LUKS2_reencrypt_get_data_offset_new(hdr) && LUKS2_set_keyslots_size(cd, hdr, LUKS2_reencrypt_get_data_offset_new(hdr)))
-			log_err(cd, "Failed to set new keyslots_size after reencryption");
+			log_err(cd, _("Failed to set new keyslots_size after reencryption"));
 		if (rh->digest_old >= 0 && rh->digest_new != rh->digest_old)
 			for (i = 0; i < LUKS2_KEYSLOTS_MAX; i++)
 				if (LUKS2_digest_by_keyslot(hdr, i) == rh->digest_old)
 					crypt_keyslot_destroy(cd, i);
 		crypt_keyslot_destroy(cd, rh->reenc_keyslot);
 		if (reenc_erase_backup_segments(cd, hdr))
-			log_err(cd, "Failed to erase backup segments");
+			log_err(cd, _("Failed to erase backup segments"));
 
 		/* do we need atomic erase? */
 		if (update_reencryption_flag(cd, 0, true))
-			log_err(cd, "Failed to disable reencryption requirement flag.");
+			log_err(cd, _("Failed to disable reencryption requirement flag."));
 	}
 
 	/* this frees reencryption lock */
@@ -2931,13 +2931,13 @@ int crypt_reencrypt(struct crypt_device *cd,
 
 	ri = LUKS2_reenc_status(hdr);
 	if (ri > CRYPT_REENCRYPT_CLEAN) {
-		log_err(cd, "Can't resume reencryption. Unexpected reencryption status.");
+		log_err(cd, _("Can't resume reencryption. Unexpected reencryption status."));
 		return -EINVAL;
 	}
 
 	rh = crypt_get_reenc_context(cd);
 	if (!rh || !rh->reenc_lock) {
-		log_err(cd, "Missing or invalid reencrypt context.");
+		log_err(cd, _("Missing or invalid reencrypt context."));
 		return -EINVAL;
 	}
 
@@ -2946,7 +2946,7 @@ int crypt_reencrypt(struct crypt_device *cd,
 	if (rh->online) {
 		r = reenc_init_helper_devices(cd, rh->device_name, rh->hotzone_name, rh->overlay_name);
 		if (r) {
-			log_err(cd, "Failed to initalize reencryption device stack.");
+			log_err(cd, _("Failed to initalize reencryption device stack."));
 			return -EINVAL;
 		}
 	} else {
@@ -2954,7 +2954,7 @@ int crypt_reencrypt(struct crypt_device *cd,
 		    crypt_storage_wrapper_get_type(rh->cw2) != DMCRYPT) {
 			excl_devfd = device_open_excl(cd, crypt_data_device(cd), O_RDONLY);
 			if (excl_devfd < 0) {
-				log_err(cd, "Failed to open device %s in exclusive mode. Already mounted?.", device_path(crypt_data_device(cd)));
+				log_err(cd, _("Failed to open device %s in exclusive mode. Already mounted?."), device_path(crypt_data_device(cd)));
 				return -EBUSY;
 			}
 		}
@@ -2977,7 +2977,7 @@ int crypt_reencrypt(struct crypt_device *cd,
 
 		r = _update_reencrypt_context(cd, rh);
 		if (r) {
-			log_err(cd, "Failed to update reencryption context.");
+			log_err(cd, _("Failed to update reencryption context."));
 			rs = REENC_ERR;
 			break;
 		}

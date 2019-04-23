@@ -3716,9 +3716,9 @@ static int _open_and_activate_reencrypt_device(struct crypt_device *cd,
 		r = crypt_reencrypt_lock(cd, &reencrypt_lock);
 	if (r) {
 		if (r == -EBUSY)
-			log_err(cd, "Reencryption in-progress. Cannot activate device.");
+			log_err(cd, _("Reencryption in-progress. Cannot activate device."));
 		else
-			log_err(cd, "Failed to get reencryption lock.");
+			log_err(cd, _("Failed to get reencryption lock."));
 		return r;
 	}
 
@@ -3731,11 +3731,11 @@ static int _open_and_activate_reencrypt_device(struct crypt_device *cd,
 		goto err;
 
 	if (name && ri == CRYPT_REENCRYPT_CRASH) {
-		log_dbg(cd, "Entering reencryption crash recovery.");
+		log_dbg(cd, _("Entering reencryption crash recovery."));
 
 		r = LUKS2_reenc_load(cd, hdr, device_size, NULL, &rh);
 		if (r < 0) {
-			log_err(cd, "Failed to load reencryption context from LUKS2 header.");
+			log_err(cd, _("Failed to load reencryption context from LUKS2 header."));
 			goto err;
 		}
 
@@ -3746,7 +3746,7 @@ static int _open_and_activate_reencrypt_device(struct crypt_device *cd,
 
 		r = LUKS2_verify_and_upload_keys(cd, hdr, rh->digest_old, rh->digest_new, vks);
 		if (r) {
-			log_err(cd, "Failed to verify and upload keys for recovery.");
+			log_err(cd, _("Failed to verify and upload keys for recovery."));
 			goto err;
 		}
 

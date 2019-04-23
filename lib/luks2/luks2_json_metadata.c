@@ -1989,7 +1989,7 @@ static int _prepare_multi_dmd(struct crypt_device *cd,
 		if (!strcmp(json_segment_type(jobj), "crypt")) {
 			vk = crypt_volume_key_by_id(vks, LUKS2_digest_by_segment(hdr, s));
 			if (!vk) {
-				log_err(cd, "Missing key for dm-crypt segment %u", s);
+				log_err(cd, _("Missing key for dm-crypt segment %u"), s);
 				return -EINVAL;
 			}
 
