@@ -25,7 +25,6 @@
 #include <stdbool.h>
 
 #include "libcryptsetup.h"
-#include "utils_reencrypt.h"
 
 #define LUKS2_MAGIC_1ST "LUKS\xba\xbe"
 #define LUKS2_MAGIC_2ND "SKUL\xba\xbe"
@@ -606,5 +605,38 @@ int LUKS2_luks1_to_luks2(struct crypt_device *cd,
 int LUKS2_luks2_to_luks1(struct crypt_device *cd,
 			 struct luks2_hdr *hdr2,
 			 struct luks_phdr *hdr1);
+
+/*
+ * LUKS2 reencryption
+ */
+int LUKS2_verify_and_upload_keys(struct crypt_device *cd,
+	struct luks2_hdr *hdr,
+	int digest_old,
+	int digest_new,
+	struct volume_key *vks);
+
+int LUKS2_reenc_load(struct crypt_device *cd,
+	struct luks2_hdr *hdr,
+	uint64_t device_size,
+	const struct crypt_params_reencrypt *params,
+	struct luks2_reenc_context **rh);
+
+int LUKS2_reenc_update_segments(struct crypt_device *cd,
+		struct luks2_hdr *hdr,
+		struct luks2_reenc_context *rh);
+
+int LUKS2_reenc_recover(struct crypt_device *cd,
+	struct luks2_hdr *hdr,
+	struct luks2_reenc_context *rh,
+	struct volume_key *vks);
+
+void LUKS2_reenc_context_free(struct crypt_device *cd, struct luks2_reenc_context *rh);
+
+int reenc_erase_backup_segments(struct crypt_device *cd, struct luks2_hdr *hdr);
+
+int crypt_reencrypt_lock(struct crypt_device *cd, struct crypt_lock_handle **reencrypt_lock);
+void crypt_reencrypt_unlock(struct crypt_device *cd, struct crypt_lock_handle *reencrypt_lock);
+
+int luks2_check_device_size(struct crypt_device *cd, struct luks2_hdr *hdr, uint64_t *device_size, bool activation);
 
 #endif
