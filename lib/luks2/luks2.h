@@ -191,16 +191,6 @@ struct luks2_reenc_context {
 	struct crypt_lock_handle *reenc_lock;
 };
 
-int LUKS2_reenc_create_segments(struct crypt_device *cd,
-				struct luks2_hdr *hdr,
-			        struct luks2_reenc_context *rh,
-				uint64_t device_size);
-
-int LUKS2_reenc_create_segments_after(struct crypt_device *cd,
-		struct luks2_hdr *hdr,
-		struct luks2_reenc_context *rh,
-		uint64_t data_offset);
-
 int LUKS2_reenc_load_segments(struct crypt_device *cd,
 				struct luks2_hdr *hdr,
 			        struct luks2_reenc_context *rh);
@@ -433,25 +423,12 @@ int LUKS2_last_segment_by_type(struct luks2_hdr *hdr,
 
 int LUKS2_get_default_segment(struct luks2_hdr *hdr);
 
-json_object *LUKS2_reencrypt_segment_new(struct luks2_hdr *hdr);
-json_object *LUKS2_reencrypt_segment_old(struct luks2_hdr *hdr);
-int LUKS2_reencrypt_segment_id_new(struct luks2_hdr *hdr);
-int LUKS2_reencrypt_segment_id_old(struct luks2_hdr *hdr);
-const char *LUKS2_reencrypt_segment_cipher_new(struct luks2_hdr *hdr);
-const char *LUKS2_reencrypt_segment_cipher_old(struct luks2_hdr *hdr);
-int LUKS2_reencrypt_get_sector_size_new(struct luks2_hdr *hdr);
-int LUKS2_reencrypt_get_sector_size_old(struct luks2_hdr *hdr);
-uint64_t LUKS2_reencrypt_get_data_offset_new(struct luks2_hdr *hdr);
-uint64_t LUKS2_reencrypt_get_data_offset_old(struct luks2_hdr *hdr);
-uint64_t LUKS2_reencrypt_get_data_offset_moved(struct luks2_hdr *hdr);
 int LUKS2_reencrypt_digest_new(struct luks2_hdr *hdr);
 int LUKS2_reencrypt_digest_old(struct luks2_hdr *hdr);
 const char *LUKS2_reencrypt_protection_type(struct luks2_hdr *hdr);
 const char *LUKS2_reencrypt_protection_hash(struct luks2_hdr *hdr);
-uint32_t LUKS2_reencrypt_protection_sector_size(struct luks2_hdr *hdr);
 uint64_t LUKS2_reencrypt_data_shift(struct luks2_hdr *hdr);
 const char *LUKS2_reencrypt_mode(struct luks2_hdr *hdr);
-int LUKS2_reencrypt_direction(struct luks2_hdr *hdr, crypt_reencrypt_direction_info *di);
 
 /*
  * Generic LUKS2 digest
@@ -551,8 +528,6 @@ int LUKS2_wipe_header_areas(struct crypt_device *cd,
 
 uint64_t LUKS2_get_data_offset(struct luks2_hdr *hdr);
 int LUKS2_get_data_size(struct luks2_hdr *hdr, uint64_t *size);
-int LUKS2_get_reencrypt_offset(struct luks2_hdr *hdr, crypt_reencrypt_direction_info di, uint64_t device_size, uint64_t *reencrypt_length, uint64_t *offset);
-uint64_t LUKS2_get_reencrypt_length(struct luks2_hdr *hdr, struct luks2_reenc_context *rh, uint64_t length, uint64_t length_max);
 int LUKS2_get_sector_size(struct luks2_hdr *hdr);
 const char *LUKS2_get_cipher(struct luks2_hdr *hdr, int segment);
 const char *LUKS2_get_integrity(struct luks2_hdr *hdr, int segment);
